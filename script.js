@@ -121,6 +121,8 @@ function initMaterialBuilder() {
     assignedPatientId: patients[0].id
   };
 
+  let lastPointerY = null;
+
   const collapsedTypes = new Set(['rating', 'textfield', 'table', 'emoji', 'info']);
 
   const els = {
@@ -184,32 +186,11 @@ function initMaterialBuilder() {
   }
 
   function bindCanvasDnD() {
-    const handleDragOver = event => {
+    els.dropzone.addEventListener('dragover', event => {
       event.preventDefault();
+      lastPointerY = event.clientY;
       els.dropzone.classList.add('drag-over');
-      state.dragTargetId = getDropBeforeId(event.clientY);
-      updateDropIndicators();
-    };
-
-    const handleDrop = event => {
-      event.preventDefault();
-      event.stopPropagation();
-      els.dropzone.classList.remove('drag-over');
-      let payload = state.dragData;
-      try {
-        payload = JSON.parse(event.dataTransfer.getData('text/plain')) || payload;
-      } catch (_) {}
-      const beforeId = getDropBeforeId(event.clientY);
-      if (!payload) return;
-      if (payload.origin === 'library') addBlock(payload.type, beforeId);
-      if (payload.origin === 'canvas') moveBlock(payload.id, beforeId);
-      state.dragData = null;
-      state.dragTargetId = null;
-      updateDropIndicators();
-    };
-
-    els.dropzone.addEventListener('dragover', handleDragOver);
-    els.stack.addEventListener('dragover', handleDragOver);
+    });
 
     els.dropzone.addEventListener('dragleave', event => {
       if (!els.dropzone.contains(event.relatedTarget)) {
@@ -219,14 +200,23 @@ function initMaterialBuilder() {
       }
     });
 
-    els.stack.addEventListener('dragleave', event => {
-      if (!els.stack.contains(event.relatedTarget)) {
-        state.dragTargetId = null;
-        updateDropIndicators();
-      }
+    els.dropzone.addEventListener('drop', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      els.dropzone.classList.remove('drag-over');
+      let payload = state.dragData;
+      try {
+        payload = JSON.parse(event.dataTransfer.getData('text/plain')) || payload;
+      } catch (_) {}
+      if (!payload) return;
+      const beforeId = state.dragTargetId || getDropBeforeId(lastPointerY ?? event.clientY);
+      if (payload.origin === 'library') addBlock(payload.type, beforeId);
+      if (payload.origin === 'canvas') moveBlock(payload.id, beforeId);
+      state.dragData = null;
+      state.dragTargetId = null;
+      lastPointerY = null;
+      updateDropIndicators();
     });
-
-    els.dropzone.addEventListener('drop', handleDrop);
   }
 
   function bindToolbar() {
@@ -328,9 +318,7 @@ function initMaterialBuilder() {
     els.empty.style.display = state.blocks.length ? 'none' : 'flex';
     els.count.textContent = `${state.blocks.length} block`;
 
-    const topGap = document.createElement('div');
-    topGap.className = `drop-gap ${state.dragTargetId === '__start__' ? 'active' : ''}`;
-    topGap.dataset.beforeId = '__start__';
+    const topGap = createDropGap('__start__');
     els.stack.appendChild(topGap);
 
     state.blocks.forEach(block => {
@@ -407,12 +395,58 @@ function initMaterialBuilder() {
         body.appendChild(renderBlockPreview(block, false));
       }
       els.stack.appendChild(card);
-
-      const gap = document.createElement('div');
-      gap.className = `drop-gap ${state.dragTargetId === block.id ? 'active' : ''}`;
-      gap.dataset.beforeId = block.id;
-      els.stack.appendChild(gap);
+      els.stack.appendChild(createDropGap(block.id));
     });
+  }
+
+  function createDropGap(beforeId) {
+    const gap = document.createElement('div');
+    gap.className = `drop-gap ${isGapActive(beforeId) ? 'active' : ''}`;
+    gap.dataset.beforeId = beforeId;
+
+    gap.addEventListener('dragover', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      lastPointerY = event.clientY;
+      els.dropzone.classList.add('drag-over');
+      state.dragTargetId = beforeId;
+      updateDropIndicators();
+    });
+
+    gap.addEventListener('dragenter', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      lastPointerY = event.clientY;
+      state.dragTargetId = beforeId;
+      updateDropIndicators();
+    });
+
+    gap.addEventListener('drop', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      let payload = state.dragData;
+      try {
+        payload = JSON.parse(event.dataTransfer.getData('text/plain')) || payload;
+      } catch (_) {}
+      const resolvedBeforeId = beforeId === '__start__' ? state.blocks[0]?.id || null : beforeId;
+      if (!payload) return;
+      if (payload.origin === 'library') addBlock(payload.type, resolvedBeforeId);
+      if (payload.origin === 'canvas') moveBlock(payload.id, resolvedBeforeId);
+      els.dropzone.classList.remove('drag-over');
+      state.dragData = null;
+      state.dragTargetId = null;
+      lastPointerY = null;
+      updateDropIndicators();
+    });
+
+    return gap;
+  }
+
+  function isGapActive(beforeId) {
+    if (beforeId === '__start__') {
+      return state.dragTargetId === '__start__' || (state.dragTargetId === state.blocks[0]?.id && !!state.blocks.length);
+    }
+    return state.dragTargetId === beforeId;
   }
 
   function renderSettings(options = {}) {
@@ -826,10 +860,7 @@ function initMaterialBuilder() {
 
   function updateDropIndicators() {
     els.stack.querySelectorAll('.drop-gap').forEach(gap => {
-      const beforeId = gap.dataset.beforeId;
-      const isStart = beforeId === '__start__' && state.dragTargetId === state.blocks[0]?.id;
-      const isActive = beforeId === state.dragTargetId || (!state.dragTargetId && beforeId === '__start__' && !state.blocks.length);
-      gap.classList.toggle('active', isActive || isStart);
+      gap.classList.toggle('active', isGapActive(gap.dataset.beforeId));
     });
   }
 
