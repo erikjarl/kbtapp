@@ -119,6 +119,8 @@ function initMaterialBuilder() {
     assignedPatientId: patients[0].id
   };
 
+  const collapsedTypes = new Set(['rating', 'textfield', 'table', 'emoji', 'info']);
+
   const els = {
     library: document.getElementById('block-library'),
     dropzone: document.getElementById('workspace-dropzone'),
@@ -299,15 +301,15 @@ function initMaterialBuilder() {
     const id = `block_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     switch (type) {
       case 'info':
-        return { id, type, title: 'Informationstext', settings: { title: 'Informationstext', content: 'Skriv instruktioner, sammanhang eller psykoedukation här.' } };
+        return { id, type, title: 'Informationstext', collapsed: collapsedTypes.has(type), settings: { title: 'Informationstext', content: 'Skriv instruktioner, sammanhang eller psykoedukation här.' } };
       case 'textfield':
-        return { id, type, title: 'Textfält', settings: { label: 'Beskriv vad du lade märke till', maxChars: 2000 } };
+        return { id, type, title: 'Textfält', collapsed: collapsedTypes.has(type), settings: { label: 'Beskriv vad du lade märke till', maxChars: 2000 } };
       case 'rating':
-        return { id, type, title: 'Skattningsbox', settings: { label: 'Ångestnivå', scale: '0-10', customMin: 0, customMax: 10, ratingType: 'clickable' } };
+        return { id, type, title: 'Skattningsbox', collapsed: collapsedTypes.has(type), settings: { label: 'Ångestnivå', scale: '0-10', customMin: 0, customMax: 10, ratingType: 'clickable' } };
       case 'table':
-        return { id, type, title: 'Tabell', settings: { rows: 3, cols: 3, headerRow: true, cells: createTableCells(3, 3) } };
+        return { id, type, title: 'Tabell', collapsed: collapsedTypes.has(type), settings: { rows: 3, cols: 3, headerRow: true, cells: createTableCells(3, 3) } };
       case 'emoji':
-        return { id, type, title: 'Emoji-skala', settings: { label: 'Hur känns det just nu?', defaultValue: 4 } };
+        return { id, type, title: 'Emoji-skala', collapsed: collapsedTypes.has(type), settings: { label: 'Hur känns det just nu?', defaultValue: 4 } };
       default:
         return null;
     }
@@ -325,7 +327,7 @@ function initMaterialBuilder() {
 
     state.blocks.forEach(block => {
       const card = document.createElement('article');
-      card.className = `canvas-block ${state.selectedBlockId === block.id ? 'selected' : ''}`;
+      card.className = `canvas-block ${state.selectedBlockId === block.id ? 'selected' : ''} ${block.collapsed ? 'collapsed' : ''}`;
       card.draggable = true;
       card.dataset.blockId = block.id;
       card.innerHTML = `
@@ -338,6 +340,9 @@ function initMaterialBuilder() {
             </div>
           </div>
           <div class="block-actions">
+            <button class="block-collapse" type="button" aria-label="${block.collapsed ? 'Visa block' : 'Dölj block'}" title="${block.collapsed ? 'Rulla upp block' : 'Rulla ihop block'}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
             <button class="block-handle" type="button" aria-label="Dra block" title="Dra för att flytta block">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4C7.9 4 7 4.9 7 6v5"/><path d="M15 4c-1.1 0-2 .9-2 2v3"/><path d="M11 10V5c0-1.1.9-2 2-2"/><path d="M7 11h10"/><path d="M7 11v7a4 4 0 0 0 8 0v-4"/></svg>
             </button>
@@ -346,11 +351,11 @@ function initMaterialBuilder() {
             </button>
           </div>
         </div>
-        <div class="block-body"></div>
+        <div class="block-body ${block.collapsed ? 'is-collapsed' : ''}"></div>
       `;
 
       card.addEventListener('click', event => {
-        if (event.target.closest('.block-remove')) return;
+        if (event.target.closest('.block-remove') || event.target.closest('.block-collapse')) return;
         state.selectedBlockId = block.id;
         renderSettings();
         renderCanvas();
@@ -377,12 +382,20 @@ function initMaterialBuilder() {
         removeBlock(block.id);
       });
 
+      card.querySelector('.block-collapse').addEventListener('click', event => {
+        event.stopPropagation();
+        updateBlock(block.id, item => { item.collapsed = !item.collapsed; });
+      });
+
       const handle = card.querySelector('.block-handle');
       handle.addEventListener('mousedown', () => card.classList.add('handle-active'));
       handle.addEventListener('mouseup', () => card.classList.remove('handle-active'));
       handle.addEventListener('mouseleave', () => card.classList.remove('handle-active'));
 
-      card.querySelector('.block-body').appendChild(renderBlockPreview(block, false));
+      const body = card.querySelector('.block-body');
+      if (!block.collapsed) {
+        body.appendChild(renderBlockPreview(block, false));
+      }
       els.stack.appendChild(card);
     });
   }
