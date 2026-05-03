@@ -126,9 +126,12 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .canvas-stack{display:grid;gap:10px;position:relative;z-index:1;align-content:start;min-width:0;width:100%;padding:0;overflow:hidden}
 .canvas-stack.drop-between .canvas-block{transition:transform .14s ease,box-shadow .18s ease,border-color .18s ease}
 .canvas-block{position:relative;border:1px solid #e1ddd7;border-radius:16px;background:#fff;padding:14px;width:100%;max-width:100%;min-width:0;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;cursor:grab;overflow:hidden}
-.canvas-block::before{content:'';position:absolute;left:12px;right:12px;top:-6px;height:0;border-top:2px solid transparent;opacity:0;transition:opacity .14s ease,border-color .14s ease}
+.canvas-block::before,.canvas-block::after{content:'';position:absolute;left:12px;right:12px;height:0;border-top:3px solid transparent;opacity:0;transition:opacity .14s ease,border-color .14s ease}
+.canvas-block::before{top:-6px}
+.canvas-block::after{bottom:-6px}
 .canvas-block.drop-target::before{border-color:#2b5f8a;opacity:1}
-.canvas-block.drop-target{border-color:#b8c7d7}
+.canvas-block.drop-target-last::after{border-color:#2b5f8a;opacity:1}
+.canvas-block.drop-target,.canvas-block.drop-target-last{border-color:#b8c7d7}
 .canvas-block:hover{transform:translateY(-1px);box-shadow:0 14px 32px rgba(31,27,24,0.06)}
 .canvas-block.selected{border-color:#2b5f8a;box-shadow:0 0 0 2px rgba(43,95,138,0.12),0 10px 20px rgba(43,95,138,0.08)}
 .canvas-block.dragging{opacity:0.45}

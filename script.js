@@ -160,13 +160,24 @@ function initMaterialBuilder() {
 
   function bindPanelLibrary() {
     els.library.querySelectorAll('.library-block').forEach(item => {
+      let wasDragging = false;
+
       item.addEventListener('dragstart', event => {
+        wasDragging = true;
         const type = item.dataset.blockType;
         state.dragData = { origin: 'library', type };
         event.dataTransfer.effectAllowed = 'copy';
         event.dataTransfer.setData('text/plain', JSON.stringify(state.dragData));
       });
+
+      item.addEventListener('dragend', () => {
+        setTimeout(() => {
+          wasDragging = false;
+        }, 0);
+      });
+
       item.addEventListener('click', event => {
+        if (wasDragging) return;
         if (event.target.closest('.library-add-badge')) {
           event.preventDefault();
         }
@@ -208,6 +219,13 @@ function initMaterialBuilder() {
       els.dropzone.classList.add('drag-over');
       state.dragTargetId = getDropBeforeId(event.clientY);
       updateDropIndicators();
+    });
+
+    els.stack.addEventListener('dragleave', event => {
+      if (!els.stack.contains(event.relatedTarget)) {
+        state.dragTargetId = null;
+        updateDropIndicators();
+      }
     });
 
     els.stack.addEventListener('drop', event => {
@@ -804,9 +822,17 @@ function initMaterialBuilder() {
   }
 
   function updateDropIndicators() {
-    els.stack.querySelectorAll('.canvas-block').forEach(card => {
-      card.classList.toggle('drop-target', !!state.dragTargetId && card.dataset.blockId === state.dragTargetId);
+    const cards = [...els.stack.querySelectorAll('.canvas-block')];
+    cards.forEach(card => {
+      card.classList.remove('drop-target', 'drop-target-last');
+      if (state.dragTargetId && card.dataset.blockId === state.dragTargetId) {
+        card.classList.add('drop-target');
+      }
     });
+
+    if (!state.dragTargetId && state.dragData && cards.length) {
+      cards[cards.length - 1].classList.add('drop-target-last');
+    }
   }
 
   function getScaleRange(settings) {
