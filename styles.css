@@ -1,181 +1,123 @@
-:root {
-  --bg: #f5f7fb;
-  --surface: #ffffff;
-  --surface-alt: #eef3ff;
-  --text: #18212f;
-  --muted: #5f6b7a;
-  --line: #dbe3f0;
-  --primary: #3b82f6;
-  --primary-dark: #2563eb;
-  --shadow: 0 20px 50px rgba(37, 99, 235, 0.12);
-}
+/******************************************************************************
+ * KBTApp – Grundstruktur (punkt 1)
+ *
+ * Färger:    varm ljus bakgrund, elegant blå accent, mörk text
+ * Typsnitt:  Cormorant Garamond (rubriker) + Inter (brödtext)
+ * Ikoner:    Tailwind/Heroicons-stil (inline SVG)
+ * Layout:    mobilvänlig, sidonavigering på desktop, bottennav på mobil
+ ******************************************************************************/
 
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body {
-  margin: 0;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: linear-gradient(180deg, #fbfcff 0%, var(--bg) 100%);
-  color: var(--text);
-}
+/* === Reset === */
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;font-size:16px}
+body{margin:0;min-height:100vh;background:#f3f2ef;color:#1f1b18;font-family:'Inter',ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:400;line-height:1.6}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;height:auto;display:block}
 
-a { color: inherit; text-decoration: none; }
-.container { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
-.narrow { width: min(760px, 100%); }
+/* === Typsnitt === */
+h1,h2,h3,h4,.brand{font-family:'Cormorant Garamond',Georgia,serif}
+h1{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:600;letter-spacing:-0.02em;margin:0 0 4px}
+h3{font-size:1rem;font-weight:600;margin:0 0 12px}
+.card-stat{font-family:'Cormorant Garamond',Georgia,serif}
 
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  backdrop-filter: blur(12px);
-  background: rgba(245, 247, 251, 0.85);
-  border-bottom: 1px solid rgba(219, 227, 240, 0.8);
-}
-.header-inner,
-.footer-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 16px 0;
-}
-.brand {
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  font-size: 1.05rem;
-}
-.nav {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-}
-.nav a {
-  color: var(--muted);
-  font-weight: 600;
-}
+/* === Vyer (login / therapist / client) === */
+.view{display:none}
+.view.active{display:flex;flex-direction:column;min-height:100vh}
 
-.hero {
-  padding: 72px 0 48px;
-}
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 28px;
-  align-items: center;
-}
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.78rem;
-  color: var(--primary-dark);
-  font-weight: 800;
-  margin-bottom: 12px;
-}
-h1, h2, h3 {
-  margin: 0 0 14px;
-  line-height: 1.08;
-}
-h1 {
-  font-size: clamp(2.5rem, 5vw, 4.6rem);
-  letter-spacing: -0.04em;
-}
-h2 {
-  font-size: clamp(1.6rem, 3vw, 2.3rem);
-  letter-spacing: -0.03em;
-}
-p {
-  line-height: 1.65;
-  color: var(--muted);
-}
-.lead {
-  font-size: 1.1rem;
-  max-width: 60ch;
-}
-.hero-actions {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin-top: 26px;
-}
-.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 48px;
-  padding: 0 18px;
-  border-radius: 999px;
-  font-weight: 700;
-  border: 1px solid transparent;
-}
-.button.primary {
-  background: linear-gradient(180deg, var(--primary), var(--primary-dark));
-  color: white;
-  box-shadow: var(--shadow);
-}
-.button.secondary {
-  background: white;
-  border-color: var(--line);
-}
-.hero-card,
-.feature-card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  box-shadow: var(--shadow);
-}
-.hero-card {
-  padding: 28px;
-}
-.card-label {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--primary-dark);
-  font-weight: 700;
-}
-.hero-card ul {
-  margin: 18px 0 0;
-  padding-left: 20px;
-  color: var(--muted);
-}
-.section {
-  padding: 56px 0;
-}
-.section.alt {
-  background: var(--surface-alt);
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-}
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-  margin-top: 24px;
-}
-.feature-card {
-  padding: 22px;
-}
-.site-footer {
-  border-top: 1px solid var(--line);
-  margin-top: 32px;
-}
-.muted {
-  color: var(--muted);
-}
-code {
-  background: #eef3ff;
-  padding: 2px 6px;
-  border-radius: 8px;
-}
+/* ========== INLOGGNING ========== */
+#login-view{display:none;align-items:center;justify-content:center;background:linear-gradient(135deg,#f3f2ef 0%,#e5e9ec 100%);position:relative;min-height:100vh;padding:20px}
+#login-view.active{display:flex}
+.login-bg{position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1580481054752-058e55c25374?q=80&w=2070&auto=format&fit=crop') center/cover no-repeat;opacity:0.06;z-index:0}
+.login-card{position:relative;z-index:1;background:rgba(255,255,255,0.8);backdrop-filter:blur(24px);border-radius:48px;padding:48px 40px 40px;max-width:420px;width:100%;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,0.08),0 0 0 1px rgba(255,255,255,0.6)}
+.login-logo{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:6px}
+.logotype{width:44px;height:44px;color:#2b5f8a}
+.login-brand{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.8rem;font-weight:600;color:#1f1b18}
+.login-sub{color:#6b645e;margin:8px 0 28px;font-size:0.95rem}
+.login-role{display:flex;align-items:center;gap:14px;padding:14px 20px;border-radius:16px;margin-bottom:12px;border:1px solid #dedad4;background:white;transition:all 0.2s;text-align:left;color:#1f1b18;font-weight:500}
+.login-role:hover{background:#f8f7f5;border-color:#2b5f8a;box-shadow:0 0 0 1px #2b5f8a}
+.login-role.primary{border-color:#2b5f8a;background:#f3f6fa}
+.role-icon{width:32px;height:32px;display:flex;align-items:center;color:#2b5f8a;flex-shrink:0}
+.role-icon svg{width:100%;height:100%}
 
-@media (max-width: 860px) {
-  .hero-grid,
-  .feature-grid {
-    grid-template-columns: 1fr;
-  }
-  .header-inner,
-  .footer-inner {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+/* ========== APP-HEADER ========== */
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:56px;background:rgba(243,242,239,0.85);backdrop-filter:blur(16px);border-bottom:1px solid #dedad4;position:sticky;top:0;z-index:20}
+.header-left{display:flex;align-items:center;gap:12px}
+.hamburger{background:none;border:none;width:28px;height:28px;padding:0;cursor:pointer;color:#4a4440;display:none}
+.header-brand{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.3rem;font-weight:600;color:#1f1b18;letter-spacing:-0.02em}
+.header-right{display:flex;align-items:center;gap:12px}
+.pill{font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;padding:4px 12px;border-radius:999px;background:#e5e9ec;color:#2b5f8a;white-space:nowrap}
+.pill.patient{background:#e7dcd0;color:#7a5c3a}
+.avatar{width:28px;height:28px;color:#6b645e}
+.avatar svg{width:100%;height:100%}
+.header-name{font-weight:500;font-size:0.9rem;color:#1f1b18}
+
+/* ========== SIDONAV ========== */
+.side-nav{position:fixed;top:56px;left:0;bottom:0;width:240px;background:#faf9f7;border-right:1px solid #dedad4;padding:12px 10px;overflow-y:auto;z-index:10}
+.side-nav .nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;margin-bottom:2px;color:#4a4440;font-weight:500;font-size:0.9rem;transition:all 0.15s}
+.side-nav .nav-item svg{width:20px;height:20px;flex-shrink:0}
+.side-nav .nav-item:hover{background:#eaebea}
+.side-nav .nav-item.active{background:#e0e6ed;color:#2b5f8a;font-weight:600}
+.side-nav .nav-item.logout{margin-top:auto;color:#b9816f}
+.side-nav .nav-item.logout:hover{background:#f3e8e5}
+
+/* ========== APP-MAIN ========== */
+.app-main{margin-left:240px;padding:20px 24px 80px;flex:1}
+.page{display:none}
+.page.active{display:block}
+.page-header{margin-bottom:20px}
+.page-header .sub{color:#6b645e;font-size:0.9rem;margin:0}
+.page-date{font-size:0.85rem;color:#6b645e;margin:2px 0 0}
+
+/* ========== DASHBOARD ========== */
+.dashboard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.card{background:white;border-radius:16px;padding:16px;border:1px solid #dedad4;box-shadow:0 2px 8px rgba(0,0,0,0.02)}
+.card-icon{width:24px;height:24px;color:#2b5f8a;margin-bottom:10px}
+.card-icon svg{width:100%;height:100%}
+.card-stat{font-size:2rem;font-weight:600;color:#1f1b18;line-height:1.1;margin-bottom:2px}
+.card-label{font-size:0.78rem;color:#6b645e;font-weight:500}
+.card-list h3{font-size:0.9rem;font-weight:600;margin-bottom:12px;color:#1f1b18}
+.card-list .list-item{padding:10px 0;border-bottom:1px solid #f0efec}
+.card-list .list-item:last-child{border:none}
+.list-primary{display:block;font-weight:500;font-size:0.88rem;color:#1f1b18}
+.list-secondary{display:block;font-size:0.78rem;color:#6b645e;margin-top:2px}
+
+/* ========== RADER ========== */
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mt-lg{margin-top:14px}
+
+/* ========== ARBETSVIEW / SKAPA PATIENTMATERIAL ========== */
+.workspace-tabs{display:flex;gap:4px;margin-bottom:16px}
+.workspace-tabs .tab{background:transparent;border:none;padding:10px 18px;border-radius:10px;font-weight:500;color:#6b645e;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.9rem}
+.workspace-tabs .tab.active{background:white;color:#2b5f8a;box-shadow:0 0 0 1px #dedad4}
+.workspace-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.editor-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#6b645e;text-align:center;padding:40px 16px;border:2px dashed #dedad4;border-radius:14px}
+
+/* ========== PLACEHOLDERS ========== */
+.placeholder-card{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 20px;color:#6b645e;text-align:center;background:white;border-radius:16px;border:1px solid #dedad4}
+
+/* ========== TERAPEU-BILD ========== */
+.therapist-image-area{margin-top:20px;border-radius:16px;overflow:hidden;max-height:200px}
+.therapist-image-area img{width:100%;height:200px;object-fit:cover;opacity:0.6}
+
+/* ========== BOTTENNAV (mobil) ========== */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:64px;background:rgba(243,242,239,0.95);backdrop-filter:blur(16px);border-top:1px solid #dedad4;justify-content:space-around;align-items:center;z-index:20}
+.bottom-item{display:flex;flex-direction:column;align-items:center;gap:2px;color:#6b645e;font-size:0.65rem;font-weight:500;padding:4px 8px;border-radius:10px;transition:all 0.15s}
+.bottom-item svg{width:22px;height:22px}
+.bottom-item.active{color:#2b5f8a}
+
+/* ========== RESPONSIV ========== */
+@media(max-width:860px){
+  .side-nav{display:none}
+  .app-main{margin-left:0}
+  .bottom-nav{display:flex}
+  .dashboard-grid{grid-template-columns:repeat(2,1fr)}
+  .row{grid-template-columns:1fr}
+  .workspace-grid{grid-template-columns:1fr}
+  .hamburger{display:block}
+}
+@media(max-width:480px){
+  .login-card{padding:32px 20px;border-radius:32px}
+  .card{padding:12px}
+  .card-stat{font-size:1.6rem}
+  .app-main{padding:16px}
 }
