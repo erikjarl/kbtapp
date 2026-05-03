@@ -13,16 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (tp) tp.textContent = today;
   if (cp) cp.textContent = today;
 
-  // --- Inloggningsvyer ---
+  // --- Vyväxling ---
   const loginView = document.getElementById('login-view');
   const therapistView = document.getElementById('therapist-view');
   const clientView = document.getElementById('client-view');
-  const loginForm = document.getElementById('login-form');
-  const usernameInput = document.getElementById('username');
-  const passwordInput = document.getElementById('password');
-  const loginError = document.getElementById('login-error');
-  const roleToggles = document.querySelectorAll('.role-toggle');
-  let selectedRole = 'therapist';
 
   function openRole(role) {
     loginView.classList.remove('active');
@@ -35,33 +29,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  roleToggles.forEach(btn => {
-    btn.addEventListener('click', () => {
-      selectedRole = btn.dataset.role;
-      roleToggles.forEach(item => item.classList.toggle('active', item === btn));
-    });
-  });
-
-  if (loginForm) {
-    loginForm.addEventListener('submit', e => {
-      e.preventDefault();
-      const username = (usernameInput?.value || '').trim();
-      const password = passwordInput?.value || '';
-      if (username === 'admin' && password === 'admin') {
-        loginError.textContent = '';
-        openRole(selectedRole);
-      } else {
-        loginError.textContent = 'Fel användarnamn eller lösenord. Använd admin / admin.';
-      }
-    });
-  }
-
   document.querySelectorAll('.login-role').forEach(btn => {
     btn.addEventListener('click', e => {
       e.preventDefault();
-      const role = btn.dataset.role;
-      if (loginError) loginError.textContent = '';
-      openRole(role);
+      openRole(btn.dataset.role);
     });
   });
 
@@ -72,9 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
       therapistView.classList.remove('active');
       clientView.classList.remove('active');
       loginView.classList.add('active');
-      if (usernameInput) usernameInput.value = '';
-      if (passwordInput) passwordInput.value = '';
-      if (loginError) loginError.textContent = '';
     });
   });
 
