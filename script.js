@@ -59,7 +59,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.login-role').forEach(btn => {
     btn.addEventListener('click', e => {
       e.preventDefault();
-      openRole(btn.dataset.role);
+      const role = btn.dataset.role;
+      if (loginError) loginError.textContent = '';
+      openRole(role);
     });
   });
 
