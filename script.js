@@ -163,7 +163,12 @@ function initMaterialBuilder() {
         event.dataTransfer.effectAllowed = 'copy';
         event.dataTransfer.setData('text/plain', JSON.stringify(state.dragData));
       });
-      item.addEventListener('click', () => addBlock(item.dataset.blockType));
+      item.addEventListener('click', event => {
+        if (event.target.closest('.library-add-badge')) {
+          event.preventDefault();
+        }
+        addBlock(item.dataset.blockType);
+      });
     });
   }
 
@@ -178,6 +183,29 @@ function initMaterialBuilder() {
       }
     });
     els.dropzone.addEventListener('drop', event => {
+      event.preventDefault();
+      els.dropzone.classList.remove('drag-over');
+      let payload = state.dragData;
+      try {
+        payload = JSON.parse(event.dataTransfer.getData('text/plain')) || payload;
+      } catch (_) {}
+      const beforeId = getDropBeforeId(event.clientY);
+      if (!payload) return;
+      if (payload.origin === 'library') {
+        addBlock(payload.type, beforeId);
+      }
+      if (payload.origin === 'canvas') {
+        moveBlock(payload.id, beforeId);
+      }
+      state.dragData = null;
+    });
+
+    els.stack.addEventListener('dragover', event => {
+      event.preventDefault();
+      els.dropzone.classList.add('drag-over');
+    });
+
+    els.stack.addEventListener('drop', event => {
       event.preventDefault();
       els.dropzone.classList.remove('drag-over');
       let payload = state.dragData;
@@ -231,6 +259,10 @@ function initMaterialBuilder() {
     state.selectedBlockId = block.id;
     render();
     showToast('Block tillagt', `${labelForType(type)} ligger nu i arbetsytan.`);
+    requestAnimationFrame(() => {
+      const inserted = els.stack.querySelector(`[data-block-id="${block.id}"]`);
+      inserted?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
   }
 
   function moveBlock(id, beforeId) {
@@ -245,6 +277,7 @@ function initMaterialBuilder() {
       else state.blocks.splice(nextIndex, 0, block);
     }
     render();
+    showToast('Block flyttat', 'Blocket har placerats om i arbetsytan.');
   }
 
   function removeBlock(id) {
@@ -305,8 +338,8 @@ function initMaterialBuilder() {
             </div>
           </div>
           <div class="block-actions">
-            <button class="block-handle" type="button" aria-label="Dra block">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 6h.01"/><path d="M10 12h.01"/><path d="M10 18h.01"/><path d="M14 6h.01"/><path d="M14 12h.01"/><path d="M14 18h.01"/></svg>
+            <button class="block-handle" type="button" aria-label="Dra block" title="Dra för att flytta block">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4C7.9 4 7 4.9 7 6v5"/><path d="M15 4c-1.1 0-2 .9-2 2v3"/><path d="M11 10V5c0-1.1.9-2 2-2"/><path d="M7 11h10"/><path d="M7 11v7a4 4 0 0 0 8 0v-4"/></svg>
             </button>
             <button class="block-remove" type="button" aria-label="Ta bort block">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
@@ -325,17 +358,29 @@ function initMaterialBuilder() {
       });
 
       card.addEventListener('dragstart', event => {
+        if (event.target.closest('.block-remove')) {
+          event.preventDefault();
+          return;
+        }
         state.dragData = { origin: 'canvas', id: block.id };
         card.classList.add('dragging');
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/plain', JSON.stringify(state.dragData));
       });
-      card.addEventListener('dragend', () => card.classList.remove('dragging'));
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        card.classList.remove('handle-active');
+      });
 
       card.querySelector('.block-remove').addEventListener('click', event => {
         event.stopPropagation();
         removeBlock(block.id);
       });
+
+      const handle = card.querySelector('.block-handle');
+      handle.addEventListener('mousedown', () => card.classList.add('handle-active'));
+      handle.addEventListener('mouseup', () => card.classList.remove('handle-active'));
+      handle.addEventListener('mouseleave', () => card.classList.remove('handle-active'));
 
       card.querySelector('.block-body').appendChild(renderBlockPreview(block, false));
       els.stack.appendChild(card);
