@@ -33,11 +33,16 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .logotype{width:44px;height:44px;color:#2b5f8a}
 .login-brand{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.8rem;font-weight:600;color:#1f1b18}
 .login-sub{color:#6b645e;margin:8px 0 28px;font-size:0.95rem}
-.login-role{display:flex;align-items:center;gap:14px;padding:14px 20px;border-radius:16px;margin-bottom:12px;border:1px solid #dedad4;background:white;transition:all 0.2s;text-align:left;color:#1f1b18;font-weight:500}
+.entry-grid{display:grid;gap:12px;margin-top:10px}
+.login-role{display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-radius:16px;margin-bottom:0;border:1px solid #dedad4;background:white;transition:all 0.2s;text-align:left;color:#1f1b18;font-weight:500}
 .login-role:hover{background:#f8f7f5;border-color:#2b5f8a;box-shadow:0 0 0 1px #2b5f8a}
 .login-role.primary{border-color:#2b5f8a;background:#f3f6fa}
 .role-icon{width:32px;height:32px;display:flex;align-items:center;color:#2b5f8a;flex-shrink:0}
 .role-icon svg{width:100%;height:100%}
+.role-copy{display:flex;flex-direction:column;gap:3px}
+.role-copy strong{font-size:0.98rem}
+.role-copy small{font-size:0.82rem;color:#6b645e;line-height:1.45}
+.login-note{margin:16px 0 0;color:#6b645e;font-size:0.82rem}
 
 
 /* ========== APP-HEADER ========== */
@@ -95,6 +100,18 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 
 /* ========== PLACEHOLDERS ========== */
 .placeholder-card{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 20px;color:#6b645e;text-align:center;background:white;border-radius:16px;border:1px solid #dedad4}
+.split-layout{display:grid;grid-template-columns:320px 1fr;gap:14px}
+.library-grid,.assignment-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.message-sidebar .list-item,.message-thread .list-item{border-bottom:1px solid #f0efec}
+.chat-bubble{max-width:80%;padding:12px 14px;border-radius:14px;margin-bottom:10px;font-size:0.92rem;line-height:1.5}
+.chat-bubble.incoming{background:#f3f0eb;color:#322c27}
+.chat-bubble.outgoing{background:#e0e6ed;color:#21384d;margin-left:auto}
+.composer-placeholder{margin-top:18px;padding:14px;border-radius:12px;border:1px dashed #d8d3cd;color:#6b645e;background:#fbfaf8;font-size:0.87rem}
+.editor-section{margin-bottom:14px}
+.section-label{display:block;font-size:0.76rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6b645e;margin-bottom:6px}
+.fake-input,.fake-textarea{background:#fbfaf8;border:1px solid #e4ddd5;border-radius:12px;padding:12px 14px;color:#3f3833;font-size:0.92rem}
+.fake-textarea{min-height:130px}
+.integration-note p{margin:0;color:#5f5852}
 
 /* ========== TERAPEU-BILD ========== */
 .therapist-image-area{margin-top:20px;border-radius:16px;overflow:hidden;max-height:200px}
@@ -112,8 +129,7 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
   .app-main{margin-left:0}
   .bottom-nav{display:flex}
   .dashboard-grid{grid-template-columns:repeat(2,1fr)}
-  .row{grid-template-columns:1fr}
-  .workspace-grid{grid-template-columns:1fr}
+  .row,.workspace-grid,.split-layout{grid-template-columns:1fr}
   .hamburger{display:block}
 }
 @media(max-width:480px){

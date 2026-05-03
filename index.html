@@ -5,17 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>KBTApp</title>
   <meta name="description" content="KBTApp – digital plattform för KBT-terapeuter och patienter."/>
-  <!-- Typsnitt -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css"/>
-  <!-- Hero-bild för startsidan (public domain terapitema) -->
   <link rel="preload" as="image" href="https://images.unsplash.com/photo-1580481054752-058e55c25374?q=80&w=2070&auto=format&fit=crop" />
 </head>
 <body>
-
-  <!-- ==================== Inloggningsvy ==================== -->
   <section id="login-view" class="view active">
     <div class="login-bg"></div>
     <div class="login-card">
@@ -29,25 +25,25 @@
         <span class="login-brand">KBTApp</span>
       </div>
       <p class="login-sub">Välj vilken vy du vill öppna för testkörning</p>
-
-      <a href="#" class="login-role primary" data-role="therapist">
-        <span class="role-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </span>
-        <span class="role-text">Gå direkt till terapeutvyn</span>
-      </a>
-      <a href="#" class="login-role" data-role="client">
-        <span class="role-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6l3 3 3-3V2"/><path d="M4 11a8 8 0 1 0 16 0"/><path d="M12 19v4"/></svg>
-        </span>
-        <span class="role-text">Gå direkt till patientvyn</span>
-      </a>
+      <div class="entry-grid">
+        <a href="#therapist" class="login-role primary" data-role="therapist">
+          <span class="role-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+          <span class="role-copy"><strong>Terapeutvy</strong><small>Dashboard, patientmeddelanden, arbetsyta, materialbibliotek och mallbibliotek.</small></span>
+        </a>
+        <a href="#client" class="login-role" data-role="client">
+          <span class="role-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6l3 3 3-3V2"/><path d="M4 11a8 8 0 1 0 16 0"/><path d="M12 19v4"/></svg>
+          </span>
+          <span class="role-copy"><strong>Patientvy</strong><small>Dashboard, hemuppgifter, material och kontakt med behandlare.</small></span>
+        </a>
+      </div>
+      <p class="login-note">Detta är frontend-demovyer. Inga riktiga användarkonton eller patientdata används ännu.</p>
     </div>
   </section>
 
-  <!-- ==================== Terapeutvy ==================== -->
-  <section id="therapist-view" class="view">
-    <!-- Sidhuvud -->
+  <section id="therapist-view" class="view" data-app-view="therapist">
     <header class="app-header">
       <div class="header-left">
         <button class="hamburger" aria-label="Meny">
@@ -58,171 +54,115 @@
       <div class="header-right">
         <span class="pill role-pill">Terapeut</span>
         <div class="avatar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
         <span class="header-name">Dr. Lindgren</span>
       </div>
     </header>
 
-    <!-- Sidonavigation -->
     <nav class="side-nav" id="therapist-nav">
-      <a href="#" class="nav-item active" data-page="dashboard">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        <span>Dashboard</span>
-      </a>
-      <a href="#" class="nav-item" data-page="messages">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>Patientmeddelanden</span>
-      </a>
-      <a href="#" class="nav-item" data-page="create">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        <span>Skapa patientmaterial</span>
-      </a>
-      <a href="#" class="nav-item" data-page="library">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        <span>Mitt materialbibliotek</span>
-      </a>
-      <a href="#" class="nav-item" data-page="templates">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-        <span>Mallbibliotek</span>
-      </a>
-      <a href="#" class="nav-item logout" data-page="logout">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        <span>Logga ut</span>
-      </a>
+      <a href="#" class="nav-item active" data-page="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Dashboard</span></a>
+      <a href="#" class="nav-item" data-page="messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Patientmeddelanden</span></a>
+      <a href="#" class="nav-item" data-page="create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>Skapa patientmaterial</span></a>
+      <a href="#" class="nav-item" data-page="library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>Mitt materialbibliotek</span></a>
+      <a href="#" class="nav-item" data-page="templates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg><span>Mallbibliotek</span></a>
+      <a href="#" class="nav-item logout" data-page="logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Tillbaka</span></a>
     </nav>
 
-    <!-- Huvudinnehåll – terapeut -->
     <main class="app-main" id="therapist-main">
-      <!-- Dashboard-sida -->
       <section data-page="dashboard" class="page active">
         <div class="page-header">
-          <h1>Dashboard</h1>
+          <div>
+            <h1>Terapeutdashboard</h1>
+            <p class="sub">Frontendskiss för flera patienter, flera meddelandetrådar och kommande backendkopplingar.</p>
+          </div>
           <p class="page-date" id="therapist-date"></p>
         </div>
         <div class="dashboard-grid">
-          <div class="card">
-            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-            <div class="card-stat">3</div>
-            <div class="card-label">Nya händelser</div>
-          </div>
-          <div class="card">
-            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-            <div class="card-stat">7</div>
-            <div class="card-label">Olästa meddelanden</div>
-          </div>
-          <div class="card">
-            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-            <div class="card-stat">12</div>
-            <div class="card-label">Aktiva patienter</div>
-          </div>
-          <div class="card">
-            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-            <div class="card-stat">2</div>
-            <div class="card-label">Bokade tider idag</div>
-          </div>
+          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="card-stat">3</div><div class="card-label">Nya händelser</div></div>
+          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="card-stat">7</div><div class="card-label">Olästa meddelanden</div></div>
+          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="card-stat">12</div><div class="card-label">Aktiva patienter</div></div>
+          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="card-stat">2</div><div class="card-label">Bokade tider idag</div></div>
         </div>
         <div class="row mt-lg">
           <div class="card card-list">
             <h3>Nästa bokade tider</h3>
-            <div class="list-item">
-              <span class="list-primary">Maja Svensson</span>
-              <span class="list-secondary">Idag 14.00 – 15.00</span>
-            </div>
-            <div class="list-item">
-              <span class="list-primary">Erik Johansson</span>
-              <span class="list-secondary">Imorgon 09.00 – 10.00</span>
-            </div>
-            <div class="list-item">
-              <span class="list-primary">Linda Berg</span>
-              <span class="list-secondary">Ons 10.00 – 11.00</span>
-            </div>
+            <div class="list-item"><span class="list-primary">Maja Svensson</span><span class="list-secondary">Idag 14.00 – 15.00 · patient_id: pt_1024</span></div>
+            <div class="list-item"><span class="list-primary">Erik Johansson</span><span class="list-secondary">Imorgon 09.00 – 10.00 · patient_id: pt_1048</span></div>
+            <div class="list-item"><span class="list-primary">Linda Berg</span><span class="list-secondary">Ons 10.00 – 11.00 · patient_id: pt_1091</span></div>
           </div>
           <div class="card card-list">
             <h3>Senaste aktivitet</h3>
-            <div class="list-item">
-              <span class="list-primary">Inlämnad hemuppgift</span>
-              <span class="list-secondary">Maja S. – 25 min sedan</span>
-            </div>
-            <div class="list-item">
-              <span class="list-primary">Nytt meddelande</span>
-              <span class="list-secondary">Erik J. – 1 tim sedan</span>
-            </div>
-            <div class="list-item">
-              <span class="list-primary">Mål uppdaterat</span>
-              <span class="list-secondary">Linda B. – 2 tim sedan</span>
-            </div>
+            <div class="list-item"><span class="list-primary">Inlämnad hemuppgift</span><span class="list-secondary">Maja S. – exponering vecka 2 · 25 min sedan</span></div>
+            <div class="list-item"><span class="list-primary">Nytt meddelande</span><span class="list-secondary">Erik J. – frågar om sömnregistrering · 1 tim sedan</span></div>
+            <div class="list-item"><span class="list-primary">Mål uppdaterat</span><span class="list-secondary">Linda B. – nytt fokus på återfallsprevention · 2 tim sedan</span></div>
           </div>
         </div>
-        <!-- Terapeutbild -->
-        <div class="therapist-image-area">
-          <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop" alt="" loading="lazy" />
+        <div class="integration-note card mt-lg">
+          <h3>Backendförberedelse</h3>
+          <p>Den här vyn är upplagd för att senare kunna bindas till användarroller, patientlistor, meddelandetrådar, uppgiftsmallar och versionshanterat patientmaterial.</p>
         </div>
+        <div class="therapist-image-area"><img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=2070&auto=format&fit=crop" alt="Terapeutisk miljö" loading="lazy" /></div>
       </section>
 
-      <!-- Patientmeddelanden – placeholder -->
       <section data-page="messages" class="page">
-        <div class="page-header">
-          <h1>Patientmeddelanden</h1>
-        </div>
-        <div class="placeholder-card">
-          <svg viewBox="0 0 24 24" width="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <p>Här visas meddelandetrådar med patienter.</p>
+        <div class="page-header"><div><h1>Patientmeddelanden</h1><p class="sub">Skiss över framtida meddelandecenter med flera patienter och trådar.</p></div></div>
+        <div class="split-layout">
+          <div class="card message-sidebar">
+            <h3>Trådar</h3>
+            <div class="list-item"><span class="list-primary">Maja Svensson</span><span class="list-secondary">Ny hemuppgift skickad</span></div>
+            <div class="list-item"><span class="list-primary">Erik Johansson</span><span class="list-secondary">Fråga om sömn</span></div>
+            <div class="list-item"><span class="list-primary">Linda Berg</span><span class="list-secondary">Bekräftad tid torsdag</span></div>
+          </div>
+          <div class="card message-thread">
+            <h3>Aktiv tråd</h3>
+            <div class="chat-bubble incoming">Hej, jag har fyllt i veckans registrering men är osäker på sista delen.</div>
+            <div class="chat-bubble outgoing">Tack, jag ser den. Vi går igenom sista delen tillsammans i nästa session.</div>
+            <div class="composer-placeholder">Här kommer senare ett säkert meddelandefält kopplat till patient_id och thread_id.</div>
+          </div>
         </div>
       </section>
 
-      <!-- Skapa patientmaterial – arbetsyta -->
       <section data-page="create" class="page">
-        <div class="page-header">
-          <h1>Skapa patientmaterial</h1>
-          <p class="sub">Arbetsyta för att skapa egna hemuppgifter och psykoedukation</p>
-        </div>
+        <div class="page-header"><div><h1>Skapa patientmaterial</h1><p class="sub">Arbetsyta för att skapa hemuppgifter, psykoedukation och patientunika versioner av mallar.</p></div></div>
         <div class="workspace-tabs">
           <button class="tab active">Arbetsyta</button>
           <button class="tab">Mallar från biblioteket</button>
+          <button class="tab">Patientversion</button>
         </div>
         <div class="workspace-grid">
           <div class="card card-editor">
-            <h3>Ny hemuppgift</h3>
-            <div class="editor-placeholder">
-              <svg viewBox="0 0 24 24" width="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              <p>Redigeringsyta för hemuppgifter – fylls i nästa steg.</p>
-            </div>
+            <h3>Redigeringsyta</h3>
+            <div class="editor-section"><span class="section-label">Titel</span><div class="fake-input">Exponeringstrappa – social ångest</div></div>
+            <div class="editor-section"><span class="section-label">Målgrupp</span><div class="fake-input">Vald patient: Maja Svensson · patient_id: pt_1024</div></div>
+            <div class="editor-section"><span class="section-label">Innehållsblock</span><div class="fake-textarea">Psykoedukation, instruktioner, reflektionsfrågor och svarsfält placeras här i nästa steg.</div></div>
           </div>
           <div class="card card-preview">
             <h3>Förhandsvisning</h3>
-            <div class="editor-placeholder">
-              <svg viewBox="0 0 24 24" width="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              <p>Förhandsgranskning av materialet visas här.</p>
-            </div>
+            <div class="editor-placeholder"><svg viewBox="0 0 24 24" width="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><p>Här visas hur hemuppgiften senare kommer se ut för patienten innan utskick.</p></div>
           </div>
         </div>
       </section>
 
-      <!-- Materialbibliotek – placeholder -->
       <section data-page="library" class="page">
-        <div class="page-header">
-          <h1>Mitt materialbibliotek</h1>
-        </div>
-        <div class="placeholder-card">
-          <svg viewBox="0 0 24 24" width="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          <p>Sparade hemuppgifter och psykoedukation visas här.</p>
+        <div class="page-header"><div><h1>Mitt materialbibliotek</h1><p class="sub">Eget bibliotek för sparade hemuppgifter och psykoedukation, redo för filter och versionshantering.</p></div></div>
+        <div class="library-grid">
+          <div class="card"><h3>Sömnregistrering</h3><p>Typ: Hemuppgift · status: aktiv mall</p></div>
+          <div class="card"><h3>Beteendeaktivering – vecka 1</h3><p>Typ: Hemuppgift · status: sparad version</p></div>
+          <div class="card"><h3>Psykoedukation om oro</h3><p>Typ: Material · status: publicerbar</p></div>
         </div>
       </section>
 
-      <!-- Mallbibliotek – placeholder -->
       <section data-page="templates" class="page">
-        <div class="page-header">
-          <h1>Mallbibliotek</h1>
-        </div>
-        <div class="placeholder-card">
-          <svg viewBox="0 0 24 24" width="32" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-          <p>Mallar för psykoedukation och hemuppgifter som kan importeras till arbetsytan.</p>
+        <div class="page-header"><div><h1>Mallbibliotek</h1><p class="sub">Förvalda mallar som senare ska kunna importeras till arbetsytan och modifieras per patient.</p></div></div>
+        <div class="library-grid">
+          <div class="card"><h3>Tankefälla – registrering</h3><p>Importera till arbetsytan och skapa patientversion.</p></div>
+          <div class="card"><h3>Exponering – planeringsblad</h3><p>Bas för gradvis exponering med anpassningsbara steg.</p></div>
+          <div class="card"><h3>Värderad riktning</h3><p>Mall för ACT-inspirerad reflektionsövning.</p></div>
         </div>
       </section>
     </main>
 
-    <!-- Mobil bottennavigering -->
     <nav class="bottom-nav" id="therapist-bottom-nav">
       <a href="#" class="bottom-item active" data-page="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Hem</span></a>
       <a href="#" class="bottom-item" data-page="messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Medd.</span></a>
@@ -232,8 +172,7 @@
     </nav>
   </section>
 
-  <!-- ==================== Patientvy ==================== -->
-  <section id="client-view" class="view">
+  <section id="client-view" class="view" data-app-view="client">
     <header class="app-header">
       <div class="header-left">
         <button class="hamburger" aria-label="Meny">
@@ -251,112 +190,90 @@
     </header>
 
     <nav class="side-nav" id="client-nav">
-      <a href="#" class="nav-item active" data-page="dashboard">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        <span>Dashboard</span>
-      </a>
-      <a href="#" class="nav-item" data-page="assignments">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        <span>Mina hemuppgifter</span>
-      </a>
-      <a href="#" class="nav-item" data-page="materials">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        <span>Mitt material</span>
-      </a>
-      <a href="#" class="nav-item" data-page="contact">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>Kontakta din behandlare</span>
-      </a>
-      <a href="#" class="nav-item logout" data-page="logout">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        <span>Logga ut</span>
-      </a>
+      <a href="#" class="nav-item active" data-page="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Dashboard</span></a>
+      <a href="#" class="nav-item" data-page="assignments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Mina hemuppgifter</span></a>
+      <a href="#" class="nav-item" data-page="materials"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>Mitt material</span></a>
+      <a href="#" class="nav-item" data-page="contact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Kontakta min behandlare</span></a>
+      <a href="#" class="nav-item logout" data-page="logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Tillbaka</span></a>
     </nav>
 
     <main class="app-main" id="client-main">
-      <!-- Klientdashboard -->
       <section data-page="dashboard" class="page active">
         <div class="page-header">
-          <h1>Hej Maja</h1>
+          <div>
+            <h1>Klientdashboard</h1>
+            <p class="sub">Skiss över en personlig översikt för patientanvändare med kommande inloggad användarkoppling.</p>
+          </div>
           <p class="page-date" id="client-date"></p>
         </div>
         <div class="dashboard-grid">
-          <div class="card">
-            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-            <div class="card-stat">2</div>
-            <div class="card-label">Nya händelser</div>
-          </div>
-          <div class="card">
-            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-            <div class="card-stat">1</div>
-            <div class="card-label">Nya meddelanden</div>
-          </div>
-          <div class="card">
-            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M12 14c-4 0-6 2-6 4v2h12v-2c0-2-2-4-6-4z"/></svg></div>
-            <div class="card-stat">3</div>
-            <div class="card-label">Mina målsättningar</div>
-          </div>
-          <div class="card">
-            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-            <div class="card-stat">1</div>
-            <div class="card-label">Nästa tid</div>
-          </div>
+          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="card-stat">2</div><div class="card-label">Nya händelser</div></div>
+          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="card-stat">1</div><div class="card-label">Nya meddelanden</div></div>
+          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M12 14c-4 0-6 2-6 4v2h12v-2c0-2-2-4-6-4z"/></svg></div><div class="card-stat">3</div><div class="card-label">Mina målsättningar</div></div>
+          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="card-stat">1</div><div class="card-label">Nästa bokade tid</div></div>
         </div>
         <div class="row mt-lg">
           <div class="card card-list">
             <h3>Senaste hemuppgiften</h3>
-            <div class="list-item">
-              <span class="list-primary">Veckoregistrering – tankar & känslor</span>
-              <span class="list-secondary">Skickad 2 dagar sedan</span>
-            </div>
+            <div class="list-item"><span class="list-primary">Veckoregistrering – tankar & känslor</span><span class="list-secondary">Skickad 2 dagar sedan · assignment_id: hw_204</span></div>
+            <div class="list-item"><span class="list-primary">Exponeringstrappa – steg 1</span><span class="list-secondary">Påbörjad · due_at: torsdag</span></div>
           </div>
           <div class="card card-list">
             <h3>Mina målsättningar</h3>
-            <div class="list-item">
-              <span class="list-primary">Hantera oro i sociala situationer</span>
-              <span class="list-secondary">Pågående</span>
-            </div>
-            <div class="list-item">
-              <span class="list-primary">Öka fysisk aktivitet</span>
-              <span class="list-secondary">Pågående</span>
-            </div>
-            <div class="list-item">
-              <span class="list-primary">Förbättra sömnrutin</span>
-              <span class="list-secondary">Pågående</span>
-            </div>
+            <div class="list-item"><span class="list-primary">Hantera oro i sociala situationer</span><span class="list-secondary">Pågående</span></div>
+            <div class="list-item"><span class="list-primary">Öka fysisk aktivitet</span><span class="list-secondary">Pågående</span></div>
+            <div class="list-item"><span class="list-primary">Förbättra sömnrutin</span><span class="list-secondary">Pågående</span></div>
           </div>
         </div>
+        <div class="integration-note card mt-lg">
+          <h3>Backendförberedelse</h3>
+          <p>Klientvyn är strukturerad för att senare kunna knytas till en inloggad patient, individuella uppgifter, svar, meddelanden och bokade tider utan att HTML-strukturen måste göras om.</p>
+        </div>
       </section>
 
-      <!-- Mina hemuppgifter -->
       <section data-page="assignments" class="page">
-        <div class="page-header"><h1>Mina hemuppgifter</h1></div>
-        <div class="placeholder-card">
-          <svg viewBox="0 0 24 24" width="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          <p>Dina hemuppgifter visas här. Fyll i och skicka till din behandlare.</p>
+        <div class="page-header"><div><h1>Mina hemuppgifter</h1><p class="sub">Framtida lista över utskickade uppgifter med status, deadlines och ifyllbara svar.</p></div></div>
+        <div class="assignment-grid">
+          <div class="card"><h3>Veckoregistrering</h3><p>Status: pågående</p><p>Svarsfält, checkrutor och inskickning kopplas här senare.</p></div>
+          <div class="card"><h3>Exponering – steg 1</h3><p>Status: ej påbörjad</p><p>Kommer få interaktiva formulärblock och möjlighet att spara utkast.</p></div>
         </div>
       </section>
 
-      <!-- Mitt material -->
       <section data-page="materials" class="page">
-        <div class="page-header"><h1>Mitt material</h1></div>
-        <div class="placeholder-card">
-          <svg viewBox="0 0 24 24" width="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          <p>Psykoedukation och material från din behandlare finns här.</p>
+        <div class="page-header"><div><h1>Mitt material</h1><p class="sub">Psykoedukation, övningar och resurser som terapeuten delat med just denna patient.</p></div></div>
+        <div class="library-grid">
+          <div class="card"><h3>Vad är oro?</h3><p>Psykoedukation · läst 80%</p></div>
+          <div class="card"><h3>Sömn och återhämtning</h3><p>Artikel · sparad</p></div>
+          <div class="card"><h3>Andningsövning</h3><p>Övning · redo att öppnas</p></div>
         </div>
       </section>
 
-      <!-- Kontakta behandlare -->
       <section data-page="contact" class="page">
-        <div class="page-header"><h1>Kontakta din behandlare</h1></div>
-        <div class="placeholder-card">
-          <svg viewBox="0 0 24 24" width="32" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <p>Skicka ett meddelande till din behandlare direkt härifrån.</p>
+        <div class="page-header"><div><h1>Kontakta min behandlare</h1><p class="sub">Skiss över ett framtida säkert kontaktflöde mellan patient och terapeut.</p></div></div>
+        <div class="split-layout">
+          <div class="card message-thread">
+            <div class="chat-bubble outgoing">Hej, jag hann bara göra första delen av hemuppgiften denna vecka.</div>
+            <div class="chat-bubble incoming">Det är helt okej. Fortsätt där du är så följer vi upp det nästa gång.</div>
+            <div class="composer-placeholder">Här kommer senare ett säkert meddelandefält för patientens kontakt med sin behandlare.</div>
+          </div>
+          <div class="card card-list">
+            <h3>Kontaktinfo</h3>
+            <div class="list-item"><span class="list-primary">Behandlare</span><span class="list-secondary">Dr. Lindgren</span></div>
+            <div class="list-item"><span class="list-primary">Nästa tid</span><span class="list-secondary">Torsdag 14.00</span></div>
+            <div class="list-item"><span class="list-primary">Svarstid</span><span class="list-secondary">Vanligen inom 1 arbetsdag</span></div>
+          </div>
         </div>
       </section>
     </main>
 
-    <!-- Mobil bottennavigering -->
     <nav class="bottom-nav" id="client-bottom-nav">
       <a href="#" class="bottom-item active" data-page="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Hem</span></a>
-      <a href="#" class="bottom-item" data-page="assignments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor
+      <a href="#" class="bottom-item" data-page="assignments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Uppg.</span></a>
+      <a href="#" class="bottom-item" data-page="materials"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>Material</span></a>
+      <a href="#" class="bottom-item" data-page="contact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Kontakt</span></a>
+    </nav>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>
