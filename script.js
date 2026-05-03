@@ -117,6 +117,7 @@ function initMaterialBuilder() {
     selectedBlockId: null,
     dragData: null,
     dragTargetId: null,
+    suppressLibraryClickUntil: 0,
     assignedPatientId: patients[0].id
   };
 
@@ -160,24 +161,20 @@ function initMaterialBuilder() {
 
   function bindPanelLibrary() {
     els.library.querySelectorAll('.library-block').forEach(item => {
-      let wasDragging = false;
-
       item.addEventListener('dragstart', event => {
-        wasDragging = true;
         const type = item.dataset.blockType;
         state.dragData = { origin: 'library', type };
+        state.suppressLibraryClickUntil = Date.now() + 300;
         event.dataTransfer.effectAllowed = 'copy';
         event.dataTransfer.setData('text/plain', JSON.stringify(state.dragData));
       });
 
       item.addEventListener('dragend', () => {
-        setTimeout(() => {
-          wasDragging = false;
-        }, 0);
+        state.suppressLibraryClickUntil = Date.now() + 300;
       });
 
       item.addEventListener('click', event => {
-        if (wasDragging) return;
+        if (Date.now() < state.suppressLibraryClickUntil) return;
         if (event.target.closest('.library-add-badge')) {
           event.preventDefault();
         }
@@ -187,17 +184,16 @@ function initMaterialBuilder() {
   }
 
   function bindCanvasDnD() {
-    els.dropzone.addEventListener('dragover', event => {
+    const handleDragOver = event => {
       event.preventDefault();
       els.dropzone.classList.add('drag-over');
-    });
-    els.dropzone.addEventListener('dragleave', event => {
-      if (!els.dropzone.contains(event.relatedTarget)) {
-        els.dropzone.classList.remove('drag-over');
-      }
-    });
-    els.dropzone.addEventListener('drop', event => {
+      state.dragTargetId = getDropBeforeId(event.clientY);
+      updateDropIndicators();
+    };
+
+    const handleDrop = event => {
       event.preventDefault();
+      event.stopPropagation();
       els.dropzone.classList.remove('drag-over');
       let payload = state.dragData;
       try {
@@ -205,20 +201,22 @@ function initMaterialBuilder() {
       } catch (_) {}
       const beforeId = getDropBeforeId(event.clientY);
       if (!payload) return;
-      if (payload.origin === 'library') {
-        addBlock(payload.type, beforeId);
-      }
-      if (payload.origin === 'canvas') {
-        moveBlock(payload.id, beforeId);
-      }
+      if (payload.origin === 'library') addBlock(payload.type, beforeId);
+      if (payload.origin === 'canvas') moveBlock(payload.id, beforeId);
       state.dragData = null;
-    });
-
-    els.stack.addEventListener('dragover', event => {
-      event.preventDefault();
-      els.dropzone.classList.add('drag-over');
-      state.dragTargetId = getDropBeforeId(event.clientY);
+      state.dragTargetId = null;
       updateDropIndicators();
+    };
+
+    els.dropzone.addEventListener('dragover', handleDragOver);
+    els.stack.addEventListener('dragover', handleDragOver);
+
+    els.dropzone.addEventListener('dragleave', event => {
+      if (!els.dropzone.contains(event.relatedTarget)) {
+        els.dropzone.classList.remove('drag-over');
+        state.dragTargetId = null;
+        updateDropIndicators();
+      }
     });
 
     els.stack.addEventListener('dragleave', event => {
@@ -228,25 +226,7 @@ function initMaterialBuilder() {
       }
     });
 
-    els.stack.addEventListener('drop', event => {
-      event.preventDefault();
-      els.dropzone.classList.remove('drag-over');
-      let payload = state.dragData;
-      try {
-        payload = JSON.parse(event.dataTransfer.getData('text/plain')) || payload;
-      } catch (_) {}
-      const beforeId = getDropBeforeId(event.clientY);
-      if (!payload) return;
-      if (payload.origin === 'library') {
-        addBlock(payload.type, beforeId);
-      }
-      if (payload.origin === 'canvas') {
-        moveBlock(payload.id, beforeId);
-      }
-      state.dragData = null;
-      state.dragTargetId = null;
-      updateDropIndicators();
-    });
+    els.dropzone.addEventListener('drop', handleDrop);
   }
 
   function bindToolbar() {
@@ -348,6 +328,11 @@ function initMaterialBuilder() {
     els.empty.style.display = state.blocks.length ? 'none' : 'flex';
     els.count.textContent = `${state.blocks.length} block`;
 
+    const topGap = document.createElement('div');
+    topGap.className = `drop-gap ${state.dragTargetId === '__start__' ? 'active' : ''}`;
+    topGap.dataset.beforeId = '__start__';
+    els.stack.appendChild(topGap);
+
     state.blocks.forEach(block => {
       const card = document.createElement('article');
       card.className = `canvas-block ${state.selectedBlockId === block.id ? 'selected' : ''} ${block.collapsed ? 'collapsed' : ''}`;
@@ -422,6 +407,11 @@ function initMaterialBuilder() {
         body.appendChild(renderBlockPreview(block, false));
       }
       els.stack.appendChild(card);
+
+      const gap = document.createElement('div');
+      gap.className = `drop-gap ${state.dragTargetId === block.id ? 'active' : ''}`;
+      gap.dataset.beforeId = block.id;
+      els.stack.appendChild(gap);
     });
   }
 
@@ -809,30 +799,29 @@ function initMaterialBuilder() {
   }
 
   function getDropBeforeId(y) {
-    const cards = [...els.stack.querySelectorAll('.canvas-block:not(.dragging)')];
-    let closest = { offset: Number.NEGATIVE_INFINITY, id: null };
-    cards.forEach(card => {
-      const rect = card.getBoundingClientRect();
-      const offset = y - rect.top - rect.height / 2;
-      if (offset < 0 && offset > closest.offset) {
-        closest = { offset, id: card.dataset.blockId };
+    const gaps = [...els.stack.querySelectorAll('.drop-gap')];
+    if (!gaps.length) return null;
+
+    let closest = { distance: Number.POSITIVE_INFINITY, id: null };
+    gaps.forEach(gap => {
+      const rect = gap.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      const distance = Math.abs(y - midpoint);
+      if (distance < closest.distance) {
+        closest = { distance, id: gap.dataset.beforeId };
       }
     });
-    return closest.id;
+
+    return closest.id === '__start__' ? state.blocks[0]?.id || null : closest.id;
   }
 
   function updateDropIndicators() {
-    const cards = [...els.stack.querySelectorAll('.canvas-block')];
-    cards.forEach(card => {
-      card.classList.remove('drop-target', 'drop-target-last');
-      if (state.dragTargetId && card.dataset.blockId === state.dragTargetId) {
-        card.classList.add('drop-target');
-      }
+    els.stack.querySelectorAll('.drop-gap').forEach(gap => {
+      const beforeId = gap.dataset.beforeId;
+      const isStart = beforeId === '__start__' && state.dragTargetId === state.blocks[0]?.id;
+      const isActive = beforeId === state.dragTargetId || (!state.dragTargetId && beforeId === '__start__' && !state.blocks.length);
+      gap.classList.toggle('active', isActive || isStart);
     });
-
-    if (!state.dragTargetId && state.dragData && cards.length) {
-      cards[cards.length - 1].classList.add('drop-target-last');
-    }
   }
 
   function getScaleRange(settings) {
