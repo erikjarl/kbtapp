@@ -1,80 +1,100 @@
-
-
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olof Halm Psykoterapi</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
-  
-    <link rel="stylesheet" href="css/style.css">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
-</head>
-<body>
-    <header>
-        <div class="container">
-            <img src=olleloggan1.png alt="Olle Malm Leg. Psykolog och Psykoanalytiker">
-            <nav>
-                <ul>
-                    <li><a href="index.html" class="active">Hem</a></li>
-                    <li><a href="om-mig.html">Om mig</a></li>
-                    <li><a href="psykoanalys.html">Psykoanalys</a></li>
-                    <li><a href="kontakt.html">Kontakt</a></li>
-                </ul>
-            </nav>
-        </div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KBTApp</title>
+    <meta name="description" content="En ny grund för KBTApp." />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="#">KBTApp</a>
+        <nav class="nav">
+          <a href="#start">Start</a>
+          <a href="#om">Om</a>
+          <a href="#funktioner">Funktioner</a>
+          <a href="#kontakt">Kontakt</a>
+        </nav>
+      </div>
     </header>
 
     <main>
-        <section class="hero">
-            <div class="container">
-                <div class="hero-content">
-                    <h2>Välkommen till min mottagning</h2>
-                    <p>Jag erbjuder psykoterapi och psykoanalys i en lugn och trygg miljö där du kan utforska dina tankar och känslor.</p>
-                    <a href="kontakt.html" class="btn">Boka tid</a>
-                </div>
+      <section id="start" class="hero">
+        <div class="container hero-grid">
+          <div>
+            <p class="eyebrow">Ny grund</p>
+            <h1>En ren start för KBTApp</h1>
+            <p class="lead">
+              Den gamla sajten är nu ersatt med en ny, enkel och modern grund att bygga vidare på.
+            </p>
+            <div class="hero-actions">
+              <a class="button primary" href="#funktioner">Se struktur</a>
+              <a class="button secondary" href="#kontakt">Nästa steg</a>
             </div>
-        </section>
+          </div>
+          <div class="hero-card">
+            <p class="card-label">Status</p>
+            <h2>Redo att byggas vidare</h2>
+            <ul>
+              <li>Ny <code>index.html</code></li>
+              <li>Ny <code>styles.css</code></li>
+              <li>Ny <code>script.js</code></li>
+            </ul>
+          </div>
+        </div>
+      </section>
 
-        <section class="intro">
-            <div class="container">
-                <div class="intro-content">
-                    <h2>Psykoterapi för personlig utveckling</h2>
-                    <p>Genom psykoterapi kan du få hjälp att förstå dig själv bättre, hantera svåra känslor och utveckla mer tillfredsställande relationer. Jag arbetar med ett psykoanalytiskt perspektiv som fokuserar på att utforska omedvetna mönster och deras påverkan på ditt liv.</p>
-                    <div class="intro-boxes">
-                        <div class="intro-box">
-                            <h3>Om mig</h3>
-                            <p>Legitimerad psykoterapeut med över 15 års erfarenhet av psykoanalytiskt arbete.</p>
-                            <a href="om-mig.html" class="btn-secondary">Läs mer</a>
-                        </div>
-                        <div class="intro-box">
-                            <h3>Psykoanalys</h3>
-                            <p>En djupgående terapiform som hjälper dig att utforska ditt inre liv och förstå dina handlingsmönster.</p>
-                            <a href="psykoanalys.html" class="btn-secondary">Läs mer</a>
-                        </div>
-                        <div class="intro-box">
-                            <h3>Kontakt</h3>
-                            <p>Kontakta mig för att boka ett första samtal eller om du har frågor om terapin.</p>
-                            <a href="kontakt.html" class="btn-secondary">Kontakta mig</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+      <section id="om" class="section">
+        <div class="container narrow">
+          <p class="eyebrow">Om</p>
+          <h2>Det här är en startpunkt</h2>
+          <p>
+            Härifrån kan sajten utvecklas till vad du vill: landningssida, appskal, informationssida eller något mer interaktivt.
+          </p>
+        </div>
+      </section>
+
+      <section id="funktioner" class="section alt">
+        <div class="container">
+          <p class="eyebrow">Grundstruktur</p>
+          <h2>Det som finns på plats nu</h2>
+          <div class="feature-grid">
+            <article class="feature-card">
+              <h3>HTML-struktur</h3>
+              <p>Semantisk startsida med sektioner för hero, innehåll och kontakt.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Modern styling</h3>
+              <p>Ren responsiv CSS som går lätt att byta riktning på senare.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Liten JS-bas</h3>
+              <p>En enkel scriptfil redo för framtida interaktioner och komponenter.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="kontakt" class="section">
+        <div class="container narrow">
+          <p class="eyebrow">Nästa steg</p>
+          <h2>Fyll på innehåll och funktion</h2>
+          <p>
+            Säg bara till vilken riktning du vill ta KBTApp, så bygger jag nästa lager ovanpå den här grunden.
+          </p>
+        </div>
+      </section>
     </main>
 
-    <footer>
-        <div class="container">
-            <p>&copy; 2025 Olof Halm Psykoterapi. Alla rättigheter förbehållna.</p>
-        </div>
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <p>© <span id="year"></span> KBTApp</p>
+        <p class="muted">Ny grund skapad för vidare utveckling.</p>
+      </div>
     </footer>
 
-    </body>
+    <script src="./script.js"></script>
+  </body>
 </html>
