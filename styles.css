@@ -33,6 +33,7 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .role-copy strong{font-size:0.98rem}
 .role-copy small{font-size:0.82rem;color:#6b645e;line-height:1.45}
 .login-note{margin:16px 0 0;color:#6b645e;font-size:0.82rem}
+.login-updated{margin:10px 0 0;color:#7a746d;font-size:0.78rem;font-weight:600}
 
 /* === Header / nav === */
 .app-header{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:56px;background:rgba(243,242,239,0.85);backdrop-filter:blur(16px);border-bottom:1px solid #dedad4;position:sticky;top:0;z-index:20}
@@ -245,10 +246,18 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
   .row,.split-layout{grid-template-columns:1fr}
   .hamburger{display:block}
   .builder-toolbar{overflow:auto;flex-wrap:nowrap;padding-bottom:2px}
-  .builder-layout{grid-template-columns:1fr}
+  .builder-layout{grid-template-columns:1fr;gap:12px}
   .block-panel,.builder-canvas{min-height:auto}
-  .block-library{grid-auto-flow:column;grid-auto-columns:minmax(240px,1fr);overflow:auto;padding-bottom:6px}
-  .dropzone{min-height:420px}
+  .block-panel{overflow:hidden;padding:12px}
+  .block-library{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,82vw);gap:10px;overflow-x:auto;overflow-y:hidden;padding:4px 2px 10px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+  .block-library::-webkit-scrollbar{height:8px}
+  .block-library::-webkit-scrollbar-thumb{background:#d2cbc2;border-radius:999px}
+  .library-block{scroll-snap-align:start;min-height:100%}
+  .builder-canvas{min-width:0}
+  .dropzone{min-height:420px;padding:14px;overflow:hidden}
+  .canvas-stack{gap:10px}
+  .canvas-block{padding:12px}
+  .material-table{min-width:540px}
   .mobile-only{display:inline-flex}
   .settings-panel{position:fixed;left:12px;right:12px;bottom:12px;top:auto;z-index:45;transform:translateY(calc(100% + 24px));transition:transform .22s ease;max-height:78vh;overflow:auto}
   .settings-panel.open{transform:translateY(0)}
@@ -260,9 +269,14 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
   .card-stat{font-size:1.6rem}
   .app-main{padding:16px}
   .builder-topbar{align-items:flex-start;flex-direction:column}
+  .builder-toolbar{gap:8px}
+  .block-library{grid-auto-columns:minmax(210px,88vw)}
+  .library-block{padding:12px}
   .field-row{grid-template-columns:1fr}
   .block-order-bar{align-items:flex-start;flex-direction:column}
   .reorder-actions{width:100%;justify-content:flex-start}
+  .block-top{align-items:flex-start}
+  .block-meta{align-items:flex-start}
   .emoji-row{grid-template-columns:repeat(3,minmax(0,1fr))}
   .toast-area{left:16px;right:16px;bottom:76px}
   .toast{min-width:0}
