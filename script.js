@@ -115,13 +115,9 @@ function initMaterialBuilder() {
   const state = {
     blocks: [],
     selectedBlockId: null,
-    dragData: null,
-    dragTargetId: null,
     suppressLibraryClickUntil: 0,
     assignedPatientId: patients[0].id
   };
-
-  let lastPointerY = null;
 
   const collapsedTypes = new Set(['rating', 'textfield', 'table', 'emoji', 'info']);
 
@@ -155,7 +151,6 @@ function initMaterialBuilder() {
   ];
 
   bindPanelLibrary();
-  bindCanvasDnD();
   bindToolbar();
   bindModals();
   renderSavedCollections();
@@ -163,18 +158,6 @@ function initMaterialBuilder() {
 
   function bindPanelLibrary() {
     els.library.querySelectorAll('.library-block').forEach(item => {
-      item.addEventListener('dragstart', event => {
-        const type = item.dataset.blockType;
-        state.dragData = { origin: 'library', type };
-        state.suppressLibraryClickUntil = Date.now() + 300;
-        event.dataTransfer.effectAllowed = 'copy';
-        event.dataTransfer.setData('text/plain', JSON.stringify(state.dragData));
-      });
-
-      item.addEventListener('dragend', () => {
-        state.suppressLibraryClickUntil = Date.now() + 300;
-      });
-
       item.addEventListener('click', event => {
         if (Date.now() < state.suppressLibraryClickUntil) return;
         if (event.target.closest('.library-add-badge')) {
@@ -182,40 +165,6 @@ function initMaterialBuilder() {
         }
         addBlock(item.dataset.blockType);
       });
-    });
-  }
-
-  function bindCanvasDnD() {
-    els.dropzone.addEventListener('dragover', event => {
-      event.preventDefault();
-      lastPointerY = event.clientY;
-      els.dropzone.classList.add('drag-over');
-    });
-
-    els.dropzone.addEventListener('dragleave', event => {
-      if (!els.dropzone.contains(event.relatedTarget)) {
-        els.dropzone.classList.remove('drag-over');
-        state.dragTargetId = null;
-        updateDropIndicators();
-      }
-    });
-
-    els.dropzone.addEventListener('drop', event => {
-      event.preventDefault();
-      event.stopPropagation();
-      els.dropzone.classList.remove('drag-over');
-      let payload = state.dragData;
-      try {
-        payload = JSON.parse(event.dataTransfer.getData('text/plain')) || payload;
-      } catch (_) {}
-      if (!payload) return;
-      const beforeId = state.dragTargetId || getDropBeforeId(lastPointerY ?? event.clientY);
-      if (payload.origin === 'library') addBlock(payload.type, beforeId);
-      if (payload.origin === 'canvas') moveBlock(payload.id, beforeId);
-      state.dragData = null;
-      state.dragTargetId = null;
-      lastPointerY = null;
-      updateDropIndicators();
     });
   }
 
@@ -260,19 +209,20 @@ function initMaterialBuilder() {
     });
   }
 
-  function moveBlock(id, beforeId) {
+  function moveBlockToIndex(id, targetIndex) {
     const currentIndex = state.blocks.findIndex(block => block.id === id);
     if (currentIndex === -1) return;
+    const boundedIndex = clamp(targetIndex, 0, state.blocks.length - 1);
+    if (currentIndex === boundedIndex) return;
     const [block] = state.blocks.splice(currentIndex, 1);
-    if (!beforeId || beforeId === id) {
-      state.blocks.push(block);
-    } else {
-      const nextIndex = state.blocks.findIndex(item => item.id === beforeId);
-      if (nextIndex === -1) state.blocks.push(block);
-      else state.blocks.splice(nextIndex, 0, block);
-    }
+    state.blocks.splice(boundedIndex, 0, block);
+    state.selectedBlockId = id;
     render();
-    showToast('Block flyttat', 'Blocket har placerats om i arbetsytan.');
+    showToast('Block flyttat', `Blocket ligger nu på plats ${boundedIndex + 1} av ${state.blocks.length}.`);
+    requestAnimationFrame(() => {
+      const moved = els.stack.querySelector(`[data-block-id="${id}"]`);
+      moved?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
   }
 
   function removeBlock(id) {
@@ -318,15 +268,31 @@ function initMaterialBuilder() {
     els.empty.style.display = state.blocks.length ? 'none' : 'flex';
     els.count.textContent = `${state.blocks.length} block`;
 
-    const topGap = createDropGap('__start__');
-    els.stack.appendChild(topGap);
-
-    state.blocks.forEach(block => {
+    state.blocks.forEach((block, index) => {
       const card = document.createElement('article');
       card.className = `canvas-block ${state.selectedBlockId === block.id ? 'selected' : ''} ${block.collapsed ? 'collapsed' : ''}`;
-      card.draggable = true;
       card.dataset.blockId = block.id;
       card.innerHTML = `
+        <div class="block-order-bar">
+          <div class="block-order-copy">
+            <span class="block-order-label">Placering ${index + 1} av ${state.blocks.length}</span>
+            <small>Flytta blocket stegvis eller direkt till toppen/botten.</small>
+          </div>
+          <div class="reorder-actions" aria-label="Flytta block">
+            <button class="reorder-button" type="button" data-move="top" ${index === 0 ? 'disabled' : ''} aria-label="Flytta till toppen" title="Flytta till toppen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></svg>
+            </button>
+            <button class="reorder-button" type="button" data-move="up" ${index === 0 ? 'disabled' : ''} aria-label="Flytta upp" title="Flytta upp">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>
+            </button>
+            <button class="reorder-button" type="button" data-move="down" ${index === state.blocks.length - 1 ? 'disabled' : ''} aria-label="Flytta ned" title="Flytta ned">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <button class="reorder-button" type="button" data-move="bottom" ${index === state.blocks.length - 1 ? 'disabled' : ''} aria-label="Flytta till botten" title="Flytta till botten">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="m18 13-6 6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
         <div class="block-top">
           <div class="block-meta">
             <span class="block-chip">${labelForType(block.type)}</span>
@@ -339,9 +305,6 @@ function initMaterialBuilder() {
             <button class="block-collapse" type="button" aria-label="${block.collapsed ? 'Visa block' : 'Dölj block'}" title="${block.collapsed ? 'Rulla upp block' : 'Rulla ihop block'}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <button class="block-handle" type="button" aria-label="Dra block" title="Dra för att flytta block">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4C7.9 4 7 4.9 7 6v5"/><path d="M15 4c-1.1 0-2 .9-2 2v3"/><path d="M11 10V5c0-1.1.9-2 2-2"/><path d="M7 11h10"/><path d="M7 11v7a4 4 0 0 0 8 0v-4"/></svg>
-            </button>
             <button class="block-remove" type="button" aria-label="Ta bort block">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
             </button>
@@ -351,28 +314,11 @@ function initMaterialBuilder() {
       `;
 
       card.addEventListener('click', event => {
-        if (event.target.closest('.block-remove') || event.target.closest('.block-collapse')) return;
+        if (event.target.closest('.block-remove') || event.target.closest('.block-collapse') || event.target.closest('.reorder-button')) return;
         state.selectedBlockId = block.id;
         renderSettings();
         renderCanvas();
         if (window.innerWidth <= 860) els.settingsPanel.classList.add('open');
-      });
-
-      card.addEventListener('dragstart', event => {
-        if (event.target.closest('.block-remove')) {
-          event.preventDefault();
-          return;
-        }
-        state.dragData = { origin: 'canvas', id: block.id };
-        card.classList.add('dragging');
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', JSON.stringify(state.dragData));
-      });
-      card.addEventListener('dragend', () => {
-        card.classList.remove('dragging');
-        card.classList.remove('handle-active');
-        state.dragTargetId = null;
-        updateDropIndicators();
       });
 
       card.querySelector('.block-remove').addEventListener('click', event => {
@@ -385,68 +331,23 @@ function initMaterialBuilder() {
         updateBlock(block.id, item => { item.collapsed = !item.collapsed; });
       });
 
-      const handle = card.querySelector('.block-handle');
-      handle.addEventListener('mousedown', () => card.classList.add('handle-active'));
-      handle.addEventListener('mouseup', () => card.classList.remove('handle-active'));
-      handle.addEventListener('mouseleave', () => card.classList.remove('handle-active'));
+      card.querySelectorAll('.reorder-button').forEach(button => {
+        button.addEventListener('click', event => {
+          event.stopPropagation();
+          const move = button.dataset.move;
+          if (move === 'top') moveBlockToIndex(block.id, 0);
+          if (move === 'up') moveBlockToIndex(block.id, index - 1);
+          if (move === 'down') moveBlockToIndex(block.id, index + 1);
+          if (move === 'bottom') moveBlockToIndex(block.id, state.blocks.length - 1);
+        });
+      });
 
       const body = card.querySelector('.block-body');
       if (!block.collapsed) {
         body.appendChild(renderBlockPreview(block, false));
       }
       els.stack.appendChild(card);
-      els.stack.appendChild(createDropGap(block.id));
     });
-  }
-
-  function createDropGap(beforeId) {
-    const gap = document.createElement('div');
-    gap.className = `drop-gap ${isGapActive(beforeId) ? 'active' : ''}`;
-    gap.dataset.beforeId = beforeId;
-
-    gap.addEventListener('dragover', event => {
-      event.preventDefault();
-      event.stopPropagation();
-      lastPointerY = event.clientY;
-      els.dropzone.classList.add('drag-over');
-      state.dragTargetId = beforeId;
-      updateDropIndicators();
-    });
-
-    gap.addEventListener('dragenter', event => {
-      event.preventDefault();
-      event.stopPropagation();
-      lastPointerY = event.clientY;
-      state.dragTargetId = beforeId;
-      updateDropIndicators();
-    });
-
-    gap.addEventListener('drop', event => {
-      event.preventDefault();
-      event.stopPropagation();
-      let payload = state.dragData;
-      try {
-        payload = JSON.parse(event.dataTransfer.getData('text/plain')) || payload;
-      } catch (_) {}
-      const resolvedBeforeId = beforeId === '__start__' ? state.blocks[0]?.id || null : beforeId;
-      if (!payload) return;
-      if (payload.origin === 'library') addBlock(payload.type, resolvedBeforeId);
-      if (payload.origin === 'canvas') moveBlock(payload.id, resolvedBeforeId);
-      els.dropzone.classList.remove('drag-over');
-      state.dragData = null;
-      state.dragTargetId = null;
-      lastPointerY = null;
-      updateDropIndicators();
-    });
-
-    return gap;
-  }
-
-  function isGapActive(beforeId) {
-    if (beforeId === '__start__') {
-      return state.dragTargetId === '__start__' || (state.dragTargetId === state.blocks[0]?.id && !!state.blocks.length);
-    }
-    return state.dragTargetId === beforeId;
   }
 
   function renderSettings(options = {}) {
@@ -707,6 +608,22 @@ function initMaterialBuilder() {
     if (!state.blocks.length) {
       els.previewShell.innerHTML = '<div class="preview-block"><h4>Tom arbetsyta</h4><p>Lägg till minst ett block för att kunna förhandsvisa materialet.</p></div>';
     } else {
+      const patient = patients.find(item => item.id === state.assignedPatientId);
+      const intro = document.createElement('section');
+      intro.className = 'preview-intro';
+      intro.innerHTML = `
+        <div>
+          <span class="preview-kicker">Patientvy</span>
+          <h4>${escapeHtml(getMaterialTitle())}</h4>
+          <p>Så här möter materialet patienten i samma fönster, med lugn läsrytm och tydliga block.</p>
+        </div>
+        <div class="preview-meta-pills">
+          <span>${state.blocks.length} block</span>
+          <span>${escapeHtml(patient ? patient.name : 'Ingen vald patient')}</span>
+        </div>
+      `;
+      els.previewShell.appendChild(intro);
+
       state.blocks.forEach(block => {
         const previewBlock = document.createElement('section');
         previewBlock.className = 'preview-block';
@@ -832,37 +749,6 @@ function initMaterialBuilder() {
     return toggle;
   }
 
-  function getDropBeforeId(y) {
-    const gaps = [...els.stack.querySelectorAll('.drop-gap')];
-    if (!gaps.length) return null;
-
-    const directHit = gaps.find(gap => {
-      const rect = gap.getBoundingClientRect();
-      return y >= rect.top && y <= rect.bottom;
-    });
-
-    if (directHit) {
-      return directHit.dataset.beforeId === '__start__' ? state.blocks[0]?.id || null : directHit.dataset.beforeId;
-    }
-
-    let closest = { distance: Number.POSITIVE_INFINITY, id: null };
-    gaps.forEach(gap => {
-      const rect = gap.getBoundingClientRect();
-      const midpoint = rect.top + rect.height / 2;
-      const distance = Math.abs(y - midpoint);
-      if (distance < closest.distance) {
-        closest = { distance, id: gap.dataset.beforeId };
-      }
-    });
-
-    return closest.id === '__start__' ? state.blocks[0]?.id || null : closest.id;
-  }
-
-  function updateDropIndicators() {
-    els.stack.querySelectorAll('.drop-gap').forEach(gap => {
-      gap.classList.toggle('active', isGapActive(gap.dataset.beforeId));
-    });
-  }
 
   function getScaleRange(settings) {
     if (settings.scale === '0-10') return { min: 0, max: 10 };
