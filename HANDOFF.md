@@ -242,6 +242,16 @@ Viktigt:
 
 ---
 
+## Arbetsregel: commit, push och verifierbar publicering
+
+När Erik ber om en förändring i `kbtapp` betyder det som standard att arbetet inte är klart förrän ändringen är:
+
+1. genomförd i koden
+2. commitad
+3. pushad till `origin main`
+
+Erik utvärderar i första hand resultatet genom att titta på hemsidan online, inte genom lokal status. Därför ska varje relevant ändring behandlas som en ändring som ska hela vägen ut till publicerad version, om inget annat uttryckligen sägs.
+
 ## Arbetsregel: tidsstämpel på login-sidan
 
 Vid varje ändring som påverkar hemsidan/frontend i `kbtapp` ska login-sidan uppdateras med en synlig tidsstämpel i formatet:
