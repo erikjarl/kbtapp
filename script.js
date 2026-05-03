@@ -116,6 +116,7 @@ function initMaterialBuilder() {
     blocks: [],
     selectedBlockId: null,
     dragData: null,
+    dragTargetId: null,
     assignedPatientId: patients[0].id
   };
 
@@ -205,6 +206,8 @@ function initMaterialBuilder() {
     els.stack.addEventListener('dragover', event => {
       event.preventDefault();
       els.dropzone.classList.add('drag-over');
+      state.dragTargetId = getDropBeforeId(event.clientY);
+      updateDropIndicators();
     });
 
     els.stack.addEventListener('drop', event => {
@@ -223,6 +226,8 @@ function initMaterialBuilder() {
         moveBlock(payload.id, beforeId);
       }
       state.dragData = null;
+      state.dragTargetId = null;
+      updateDropIndicators();
     });
   }
 
@@ -375,6 +380,8 @@ function initMaterialBuilder() {
       card.addEventListener('dragend', () => {
         card.classList.remove('dragging');
         card.classList.remove('handle-active');
+        state.dragTargetId = null;
+        updateDropIndicators();
       });
 
       card.querySelector('.block-remove').addEventListener('click', event => {
@@ -794,6 +801,12 @@ function initMaterialBuilder() {
       }
     });
     return closest.id;
+  }
+
+  function updateDropIndicators() {
+    els.stack.querySelectorAll('.canvas-block').forEach(card => {
+      card.classList.toggle('drop-target', !!state.dragTargetId && card.dataset.blockId === state.dragTargetId);
+    });
   }
 
   function getScaleRange(settings) {
