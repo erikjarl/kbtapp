@@ -124,29 +124,121 @@
       </section>
 
       <section data-page="create" class="page">
-        <div class="page-header"><div><h1>Skapa patientmaterial</h1><p class="sub">Arbetsyta för att skapa hemuppgifter, psykoedukation och patientunika versioner av mallar.</p></div></div>
+        <div class="page-header">
+          <div>
+            <h1>Skapa patientmaterial</h1>
+            <p class="sub">Bygg interaktiva hemuppgifter, formulär och psykoedukation direkt i arbetsytan.</p>
+          </div>
+        </div>
         <div class="workspace-tabs">
           <button class="tab active">Arbetsyta</button>
           <button class="tab">Mallar från biblioteket</button>
           <button class="tab">Patientversion</button>
         </div>
-        <div class="workspace-grid">
-          <div class="card card-editor">
-            <h3>Redigeringsyta</h3>
-            <div class="editor-section"><span class="section-label">Titel</span><div class="fake-input">Exponeringstrappa – social ångest</div></div>
-            <div class="editor-section"><span class="section-label">Målgrupp</span><div class="fake-input">Vald patient: Maja Svensson · patient_id: pt_1024</div></div>
-            <div class="editor-section"><span class="section-label">Innehållsblock</span><div class="fake-textarea">Psykoedukation, instruktioner, reflektionsfrågor och svarsfält placeras här i nästa steg.</div></div>
+        <section class="material-builder" id="material-builder">
+          <div class="builder-topbar card">
+            <div>
+              <span class="builder-eyebrow">Materialbyggare</span>
+              <h3>Skapa patientmaterial</h3>
+            </div>
+            <button class="settings-toggle mobile-only" id="open-settings" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v12"/><path d="M6 12h12"/></svg>
+              Inställningar
+            </button>
           </div>
-          <div class="card card-preview">
-            <h3>Förhandsvisning</h3>
-            <div class="editor-placeholder"><svg viewBox="0 0 24 24" width="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><p>Här visas hur hemuppgiften senare kommer se ut för patienten innan utskick.</p></div>
+
+          <div class="builder-toolbar">
+            <button class="builder-action" type="button" id="preview-material">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Förhandsvisa
+            </button>
+            <button class="builder-action" type="button" id="save-template">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Spara som mall
+            </button>
+            <button class="builder-action" type="button" id="save-library">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+              Spara i materialbibliotek
+            </button>
+            <button class="builder-action accent" type="button" id="assign-patient">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>
+              Tilldela patient
+            </button>
           </div>
-        </div>
+
+          <div class="builder-layout">
+            <aside class="builder-panel block-panel card">
+              <div class="panel-head">
+                <div>
+                  <span class="builder-eyebrow">Blockpanel</span>
+                  <h3>Block att dra in</h3>
+                </div>
+              </div>
+              <div class="block-library" id="block-library">
+                <button class="library-block" type="button" draggable="true" data-block-type="info">
+                  <span class="library-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01"/><path d="M11 12h1v4h1"/></svg></span>
+                  <span><strong>Informationstext</strong><small>Rubrik + längre text till patienten</small></span>
+                </button>
+                <button class="library-block" type="button" draggable="true" data-block-type="textfield">
+                  <span class="library-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16"/><path d="M4 12h10"/><path d="M4 17h7"/></svg></span>
+                  <span><strong>Textfält</strong><small>Fritextsvar med teckengräns</small></span>
+                </button>
+                <button class="library-block" type="button" draggable="true" data-block-type="rating">
+                  <span class="library-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 20V4"/><path d="M17 20V4"/><circle cx="12" cy="10" r="3"/></svg></span>
+                  <span><strong>Skattningsbox</strong><small>Klickbar skala eller dragbar mätare</small></span>
+                </button>
+                <button class="library-block" type="button" draggable="true" data-block-type="table">
+                  <span class="library-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M9 4v16"/><path d="M15 4v16"/></svg></span>
+                  <span><strong>Tabell</strong><small>Låsta celler och patientfält i samma matris</small></span>
+                </button>
+                <button class="library-block" type="button" draggable="true" data-block-type="emoji">
+                  <span class="library-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 15s1.5 2 4 2 4-2 4-2"/><path d="M9 10h.01"/><path d="M15 10h.01"/></svg></span>
+                  <span><strong>Emoji-skala</strong><small>Sexgradig känsloindikator</small></span>
+                </button>
+              </div>
+            </aside>
+
+            <section class="builder-canvas card">
+              <div class="panel-head">
+                <div>
+                  <span class="builder-eyebrow">Arbetsyta</span>
+                  <h3>Komponera materialet</h3>
+                </div>
+                <span class="canvas-count" id="canvas-count">0 block</span>
+              </div>
+              <div class="dropzone" id="workspace-dropzone">
+                <div class="empty-dropzone" id="empty-dropzone">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                  <p>Dra in block hit</p>
+                  <small>Skapa material genom att släppa block i arbetsytan eller klicka på ett block i panelen.</small>
+                </div>
+                <div class="canvas-stack" id="canvas-stack"></div>
+              </div>
+            </section>
+
+            <aside class="builder-panel settings-panel card" id="settings-panel">
+              <div class="panel-head">
+                <div>
+                  <span class="builder-eyebrow">Inställningar</span>
+                  <h3>Valt block</h3>
+                </div>
+                <button class="icon-button mobile-only" id="close-settings" type="button" aria-label="Stäng inställningar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <div class="settings-empty" id="settings-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18"/><path d="M3 12h18"/></svg>
+                <p>Välj ett block i arbetsytan för att redigera innehåll och inställningar.</p>
+              </div>
+              <div id="settings-content"></div>
+            </aside>
+          </div>
+        </section>
       </section>
 
       <section data-page="library" class="page">
         <div class="page-header"><div><h1>Mitt materialbibliotek</h1><p class="sub">Eget bibliotek för sparade hemuppgifter och psykoedukation, redo för filter och versionshantering.</p></div></div>
-        <div class="library-grid">
+        <div class="library-grid" id="library-grid">
           <div class="card"><h3>Sömnregistrering</h3><p>Typ: Hemuppgift · status: aktiv mall</p></div>
           <div class="card"><h3>Beteendeaktivering – vecka 1</h3><p>Typ: Hemuppgift · status: sparad version</p></div>
           <div class="card"><h3>Psykoedukation om oro</h3><p>Typ: Material · status: publicerbar</p></div>
@@ -155,7 +247,7 @@
 
       <section data-page="templates" class="page">
         <div class="page-header"><div><h1>Mallbibliotek</h1><p class="sub">Förvalda mallar som senare ska kunna importeras till arbetsytan och modifieras per patient.</p></div></div>
-        <div class="library-grid">
+        <div class="library-grid" id="template-grid">
           <div class="card"><h3>Tankefälla – registrering</h3><p>Importera till arbetsytan och skapa patientversion.</p></div>
           <div class="card"><h3>Exponering – planeringsblad</h3><p>Bas för gradvis exponering med anpassningsbara steg.</p></div>
           <div class="card"><h3>Värderad riktning</h3><p>Mall för ACT-inspirerad reflektionsövning.</p></div>
@@ -273,6 +365,51 @@
       <a href="#" class="bottom-item" data-page="contact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Kontakt</span></a>
     </nav>
   </section>
+
+  <div class="overlay-modal" id="preview-modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="preview"></div>
+    <div class="modal-card modal-large">
+      <div class="modal-head">
+        <div>
+          <span class="builder-eyebrow">Förhandsvisning</span>
+          <h3>Så ser materialet ut för patienten</h3>
+        </div>
+        <button class="icon-button" type="button" data-close-modal="preview" aria-label="Stäng förhandsvisning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="preview-shell" id="preview-shell"></div>
+    </div>
+  </div>
+
+  <div class="overlay-modal" id="assign-modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="assign"></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <span class="builder-eyebrow">Tilldela patient</span>
+          <h3>Välj mottagare</h3>
+        </div>
+        <button class="icon-button" type="button" data-close-modal="assign" aria-label="Stäng tilldelning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <label class="field-label" for="patient-select">Patient</label>
+      <select id="patient-select" class="form-control">
+        <option value="pt_1024">Maja Svensson (pt_1024)</option>
+        <option value="pt_1048">Erik Johansson (pt_1048)</option>
+        <option value="pt_1091">Linda Berg (pt_1091)</option>
+        <option value="pt_1122">Katarina Nilsson (pt_1122)</option>
+        <option value="pt_1156">Johan Andersson (pt_1156)</option>
+      </select>
+      <div class="modal-actions">
+        <button class="builder-action" type="button" data-close-modal="assign">Avbryt</button>
+        <button class="builder-action accent" type="button" id="confirm-assign">Tilldela material</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-area" id="toast-area"></div>
 
   <script src="script.js"></script>
 </body>
