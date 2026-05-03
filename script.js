@@ -802,6 +802,15 @@ function initMaterialBuilder() {
     const gaps = [...els.stack.querySelectorAll('.drop-gap')];
     if (!gaps.length) return null;
 
+    const directHit = gaps.find(gap => {
+      const rect = gap.getBoundingClientRect();
+      return y >= rect.top && y <= rect.bottom;
+    });
+
+    if (directHit) {
+      return directHit.dataset.beforeId === '__start__' ? state.blocks[0]?.id || null : directHit.dataset.beforeId;
+    }
+
     let closest = { distance: Number.POSITIVE_INFINITY, id: null };
     gaps.forEach(gap => {
       const rect = gap.getBoundingClientRect();
