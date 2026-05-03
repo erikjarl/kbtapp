@@ -255,11 +255,11 @@ function initMaterialBuilder() {
     render();
   }
 
-  function updateBlock(id, updater) {
+  function updateBlock(id, updater, options = {}) {
     const block = state.blocks.find(item => item.id === id);
     if (!block) return;
     updater(block);
-    render();
+    render(options);
   }
 
   function createBlock(type) {
@@ -280,9 +280,9 @@ function initMaterialBuilder() {
     }
   }
 
-  function render() {
+  function render(options = {}) {
     renderCanvas();
-    renderSettings();
+    renderSettings(options);
   }
 
   function renderCanvas() {
@@ -342,8 +342,14 @@ function initMaterialBuilder() {
     });
   }
 
-  function renderSettings() {
+  function renderSettings(options = {}) {
     const block = state.blocks.find(item => item.id === state.selectedBlockId);
+    const preserve = options.preserveFocus;
+    const activeElement = preserve ? document.activeElement : null;
+    const activeName = preserve && activeElement ? activeElement.getAttribute('data-setting-name') : null;
+    const activeSelectionStart = preserve && activeElement && typeof activeElement.selectionStart === 'number' ? activeElement.selectionStart : null;
+    const activeSelectionEnd = preserve && activeElement && typeof activeElement.selectionEnd === 'number' ? activeElement.selectionEnd : null;
+
     els.settingsContent.innerHTML = '';
     els.settingsEmpty.style.display = block ? 'none' : 'grid';
     if (!block) return;
@@ -356,33 +362,43 @@ function initMaterialBuilder() {
     if (block.type === 'table') renderTableSettings(container, block);
     if (block.type === 'emoji') renderEmojiSettings(container, block);
     els.settingsContent.appendChild(container);
+
+    if (preserve && activeName) {
+      const nextField = els.settingsContent.querySelector(`[data-setting-name="${activeName}"]`);
+      if (nextField) {
+        nextField.focus({ preventScroll: true });
+        if (typeof nextField.selectionStart === 'number' && activeSelectionStart !== null && activeSelectionEnd !== null) {
+          nextField.setSelectionRange(activeSelectionStart, activeSelectionEnd);
+        }
+      }
+    }
   }
 
   function renderInfoSettings(container, block) {
     container.append(
-      createTextInput('Rubrik', block.settings.title, value => updateBlock(block.id, item => { item.settings.title = value; item.title = value || 'Informationstext'; })),
-      createTextarea('Innehåll', block.settings.content, value => updateBlock(block.id, item => { item.settings.content = value; }))
+      createTextInput('Rubrik', block.settings.title, value => updateBlock(block.id, item => { item.settings.title = value; item.title = value || 'Informationstext'; }, { preserveFocus: true }), 'info-title'),
+      createTextarea('Innehåll', block.settings.content, value => updateBlock(block.id, item => { item.settings.content = value; }, { preserveFocus: true }), 'info-content')
     );
   }
 
   function renderTextFieldSettings(container, block) {
     container.append(
-      createTextInput('Ledtext', block.settings.label, value => updateBlock(block.id, item => { item.settings.label = value; })),
-      createNumberInput('Max tecken', block.settings.maxChars, 50, 2000, value => updateBlock(block.id, item => { item.settings.maxChars = value; }))
+      createTextInput('Ledtext', block.settings.label, value => updateBlock(block.id, item => { item.settings.label = value; }, { preserveFocus: true }), 'textfield-label'),
+      createNumberInput('Max tecken', block.settings.maxChars, 50, 2000, value => updateBlock(block.id, item => { item.settings.maxChars = value; }, { preserveFocus: true }), 'textfield-maxchars')
     );
   }
 
   function renderRatingSettings(container, block) {
     container.append(
-      createTextInput('Etikett', block.settings.label, value => updateBlock(block.id, item => { item.settings.label = value; })),
-      createSelect('Skala', block.settings.scale, ['0-10', '1-5', '1-7', 'SUDS 0-100', 'custom'], value => updateBlock(block.id, item => { item.settings.scale = value; }))
+      createTextInput('Etikett', block.settings.label, value => updateBlock(block.id, item => { item.settings.label = value; }, { preserveFocus: true }), 'rating-label'),
+      createSelect('Skala', block.settings.scale, ['0-10', '1-5', '1-7', 'SUDS 0-100', 'custom'], value => updateBlock(block.id, item => { item.settings.scale = value; }, { preserveFocus: true }), 'rating-scale')
     );
     if (block.settings.scale === 'custom') {
       const row = document.createElement('div');
       row.className = 'field-row';
       row.append(
-        createNumberInput('Minvärde', block.settings.customMin, -100, 100, value => updateBlock(block.id, item => { item.settings.customMin = value; })),
-        createNumberInput('Maxvärde', block.settings.customMax, -100, 100, value => updateBlock(block.id, item => { item.settings.customMax = value; }))
+        createNumberInput('Minvärde', block.settings.customMin, -100, 100, value => updateBlock(block.id, item => { item.settings.customMin = value; }, { preserveFocus: true }), 'rating-custom-min'),
+        createNumberInput('Maxvärde', block.settings.customMax, -100, 100, value => updateBlock(block.id, item => { item.settings.customMax = value; }, { preserveFocus: true }), 'rating-custom-max')
       );
       container.appendChild(row);
     }
@@ -392,7 +408,7 @@ function initMaterialBuilder() {
     radioGroup.innerHTML = '<label class="field-label">Typ</label>';
     const radioRow = document.createElement('div');
     radioRow.className = 'radio-row';
-    [['clickable', 'Klickbara skalsteg'], ['slider', 'Dragbar vertikal mätare']].forEach(([value, label]) => {
+    [['clickable', 'Klickbara skalsteg'], ['slider', 'Dragbar horisontell mätare']].forEach(([value, label]) => {
       const option = document.createElement('label');
       option.className = 'radio-option';
       option.innerHTML = `<input type="radio" name="rating-type" value="${value}" ${block.settings.ratingType === value ? 'checked' : ''}/> <span>${label}</span>`;
@@ -407,8 +423,8 @@ function initMaterialBuilder() {
     const configGrid = document.createElement('div');
     configGrid.className = 'table-config-grid';
     configGrid.append(
-      createNumberInput('Rader', block.settings.rows, 1, 8, value => updateBlock(block.id, item => resizeTable(item, value, item.settings.cols))),
-      createNumberInput('Kolumner', block.settings.cols, 1, 4, value => updateBlock(block.id, item => resizeTable(item, item.settings.rows, value)))
+      createNumberInput('Rader', block.settings.rows, 1, 8, value => updateBlock(block.id, item => resizeTable(item, value, item.settings.cols), { preserveFocus: true }), 'table-rows'),
+      createNumberInput('Kolumner', block.settings.cols, 1, 4, value => updateBlock(block.id, item => resizeTable(item, item.settings.rows, value), { preserveFocus: true }), 'table-cols')
     );
     container.appendChild(configGrid);
 
@@ -443,7 +459,7 @@ function initMaterialBuilder() {
         editor.className = `cell-editor-card ${block.settings.headerRow && rowIndex === 0 ? 'is-header' : ''}`;
         editor.innerHTML = `<strong>Cell ${rowIndex + 1}.${colIndex + 1}</strong>`;
         editor.append(
-          createTextInput('Text', cell.text, value => updateBlock(block.id, item => { item.settings.cells[rowIndex][colIndex].text = value; }), true),
+          createTextInput('Text', cell.text, value => updateBlock(block.id, item => { item.settings.cells[rowIndex][colIndex].text = value; }, { preserveFocus: true }), `table-${rowIndex}-${colIndex}-text`, true),
           createToggle(cell.type === 'patient', checked => updateBlock(block.id, item => { item.settings.cells[rowIndex][colIndex].type = checked ? 'patient' : 'static'; }), 'Patientfält', 'Låt patienten fylla i denna cell')
         );
         cellGrid.appendChild(editor);
@@ -454,8 +470,8 @@ function initMaterialBuilder() {
 
   function renderEmojiSettings(container, block) {
     container.append(
-      createTextInput('Etikett', block.settings.label, value => updateBlock(block.id, item => { item.settings.label = value; })),
-      createNumberInput('Förvalt värde', block.settings.defaultValue, 1, 6, value => updateBlock(block.id, item => { item.settings.defaultValue = value; }))
+      createTextInput('Etikett', block.settings.label, value => updateBlock(block.id, item => { item.settings.label = value; }, { preserveFocus: true }), 'emoji-label'),
+      createNumberInput('Förvalt värde', block.settings.defaultValue, 1, 6, value => updateBlock(block.id, item => { item.settings.defaultValue = value; }, { preserveFocus: true }), 'emoji-default')
     );
   }
 
@@ -490,18 +506,20 @@ function initMaterialBuilder() {
         const { min, max } = getScaleRange(block.settings);
         if (block.settings.ratingType === 'slider') {
           const slider = document.createElement('div');
-          slider.className = 'slider-preview';
+          slider.className = 'slider-preview horizontal';
+          const scaleTop = document.createElement('div');
+          scaleTop.className = 'slider-scale horizontal';
+          scaleTop.innerHTML = `<strong>${min}</strong><span>Dragbar nivå</span><strong>${max}</strong>`;
           const rail = document.createElement('div');
-          rail.className = 'slider-rail';
+          rail.className = 'slider-rail horizontal';
+          const fill = document.createElement('div');
+          fill.className = 'slider-fill';
+          fill.style.width = '50%';
           const thumb = document.createElement('div');
-          thumb.className = 'slider-thumb';
-          const percent = 50;
-          thumb.style.top = `calc(${100 - percent}% - 16px)`;
-          rail.appendChild(thumb);
-          const scale = document.createElement('div');
-          scale.className = 'slider-scale';
-          scale.innerHTML = `<strong>${max}</strong><span>Dragbar nivå</span><span>${min}</span>`;
-          slider.append(rail, scale);
+          thumb.className = 'slider-thumb horizontal';
+          thumb.style.left = 'calc(50% - 16px)';
+          rail.append(fill, thumb);
+          slider.append(scaleTop, rail);
           wrap.appendChild(slider);
         } else {
           const row = document.createElement('div');
@@ -641,27 +659,27 @@ function initMaterialBuilder() {
     return card;
   }
 
-  function createTextInput(label, value, onChange, compact = false) {
+  function createTextInput(label, value, onChange, fieldName = '', compact = false) {
     const group = document.createElement('div');
     group.className = 'field-group';
-    group.innerHTML = `<label class="field-label">${label}</label><input type="text" class="form-control" value="${escapeAttribute(value || '')}"/>`;
+    group.innerHTML = `<label class="field-label">${label}</label><input type="text" class="form-control" data-setting-name="${escapeAttribute(fieldName)}" value="${escapeAttribute(value || '')}"/>`;
     group.querySelector('input').addEventListener('input', event => onChange(event.target.value));
     if (compact) group.style.marginBottom = '6px';
     return group;
   }
 
-  function createTextarea(label, value, onChange) {
+  function createTextarea(label, value, onChange, fieldName = '') {
     const group = document.createElement('div');
     group.className = 'field-group';
-    group.innerHTML = `<label class="field-label">${label}</label><textarea>${escapeHtml(value || '')}</textarea>`;
+    group.innerHTML = `<label class="field-label">${label}</label><textarea data-setting-name="${escapeAttribute(fieldName)}">${escapeHtml(value || '')}</textarea>`;
     group.querySelector('textarea').addEventListener('input', event => onChange(event.target.value));
     return group;
   }
 
-  function createNumberInput(label, value, min, max, onChange) {
+  function createNumberInput(label, value, min, max, onChange, fieldName = '') {
     const group = document.createElement('div');
     group.className = 'field-group';
-    group.innerHTML = `<label class="field-label">${label}</label><input type="number" class="form-control" min="${min}" max="${max}" value="${value}"/>`;
+    group.innerHTML = `<label class="field-label">${label}</label><input type="number" class="form-control" data-setting-name="${escapeAttribute(fieldName)}" min="${min}" max="${max}" value="${value}"/>`;
     group.querySelector('input').addEventListener('input', event => {
       const next = clamp(Number(event.target.value || min), min, max);
       onChange(next);
@@ -669,11 +687,12 @@ function initMaterialBuilder() {
     return group;
   }
 
-  function createSelect(label, value, options, onChange) {
+  function createSelect(label, value, options, onChange, fieldName = '') {
     const group = document.createElement('div');
     group.className = 'field-group';
     const select = document.createElement('select');
     select.className = 'form-control';
+    select.setAttribute('data-setting-name', fieldName);
     options.forEach(optionValue => {
       const option = document.createElement('option');
       option.value = optionValue;
