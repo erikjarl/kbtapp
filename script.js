@@ -810,8 +810,8 @@ function initMaterialBuilder() {
   }
 
   function renderSavedCollections() {
-    renderCollectionGrid(els.libraryGrid, materialSeed, JSON.parse(localStorage.getItem(STORAGE_KEYS.library) || '[]'));
-    renderCollectionGrid(els.templateGrid, templateSeed, JSON.parse(localStorage.getItem(STORAGE_KEYS.templates) || '[]'));
+    renderCollectionGrid(els.libraryGrid, materialSeed, JSON.parse(localStorage.getItem(STORAGE_KEYS.library) || '[]'), 'library');
+    renderCollectionGrid(els.templateGrid, templateSeed, JSON.parse(localStorage.getItem(STORAGE_KEYS.templates) || '[]'), 'templates');
     renderClientAssignments();
     renderClientMaterials();
     renderTherapistSubmissions();
@@ -1045,20 +1045,21 @@ function initMaterialBuilder() {
     });
   }
 
-  function renderCollectionGrid(target, seed, savedItems) {
+  function renderCollectionGrid(target, seed, savedItems, sourceKind) {
     target.innerHTML = '';
-    seed.forEach(item => target.appendChild(createLibraryCard(item)));
+    seed.forEach(item => target.appendChild(createLibraryCard(item, '', { sourceKind, isSaved: false })));
     savedItems.forEach(item => {
       target.appendChild(createLibraryCard({
         title: item.title,
         description: `${item.patient} · ${item.blocks.length} block · sparad ${item.createdAt}`,
         meta: ['Klar att använda', 'Senast sparad'],
-        type: target.id === 'template-grid' ? 'Mall' : 'Hemuppgift'
-      }));
+        type: sourceKind === 'templates' ? 'Mall' : 'Hemuppgift',
+        blocks: structuredClone(item.blocks)
+      }, '', { sourceKind, isSaved: true }));
     });
   }
 
-  function createLibraryCard(itemOrTitle, description = '') {
+  function createLibraryCard(itemOrTitle, description = '', options = {}) {
     const item = typeof itemOrTitle === 'string'
       ? { title: itemOrTitle, description }
       : itemOrTitle;
@@ -1066,9 +1067,21 @@ function initMaterialBuilder() {
     const copy = item.description || description;
     const type = item.type || (/mall/i.test(title + ' ' + copy) ? 'Mall' : /psykoedukation|artikel|material/i.test(copy) ? 'Material' : 'Hemuppgift');
     const meta = item.meta?.length ? item.meta : ['Klar att använda', 'Mobilvänlig vy'];
+    const actionPrimary = options.sourceKind === 'templates' ? 'Importera' : 'Öppna';
+    const actionSecondary = options.sourceKind === 'templates' ? 'Importera kopia' : 'Duplicera';
     const card = document.createElement('div');
     card.className = 'card library-card';
-    card.innerHTML = `<div class="library-card-head"><div><span class="library-card-type">${escapeHtml(type)}</span><h3>${escapeHtml(title)}</h3></div></div><p>${escapeHtml(copy)}</p><div class="library-card-meta">${meta.map(label => `<span>${escapeHtml(label)}</span>`).join('')}</div><div class="library-card-actions"><button class="builder-action" type="button">Öppna</button><button class="builder-action" type="button">Duplicera</button></div>`;
+    card.innerHTML = `<div class="library-card-head"><div><span class="library-card-type">${escapeHtml(type)}</span><h3>${escapeHtml(title)}</h3></div></div><p>${escapeHtml(copy)}</p><div class="library-card-meta">${meta.map(label => `<span>${escapeHtml(label)}</span>`).join('')}</div><div class="library-card-actions"><button class="builder-action" type="button">${actionPrimary}</button><button class="builder-action" type="button">${actionSecondary}</button></div>`;
+
+    const [primaryButton, secondaryButton] = card.querySelectorAll('button');
+    primaryButton.addEventListener('click', () => {
+      if (options.sourceKind === 'templates') {
+        loadCollectionIntoBuilder(item, { duplicate: false, sourceKind: options.sourceKind });
+      } else {
+        previewLibraryItem(item);
+      }
+    });
+    secondaryButton.addEventListener('click', () => loadCollectionIntoBuilder(item, { duplicate: true, sourceKind: options.sourceKind }));
     return card;
   }
 
@@ -1215,8 +1228,8 @@ function initMaterialBuilder() {
   }
 
 
-  function estimateCompletionTime() {
-    const minutes = state.blocks.reduce((sum, block) => {
+  function estimateCompletionTime(blocks = state.blocks) {
+    const minutes = blocks.reduce((sum, block) => {
       if (block.type === 'info') return sum + 1;
       if (block.type === 'textfield') return sum + Math.max(2, (block.settings.fields?.length || 1) * 2);
       if (block.type === 'table') return sum + 3;
@@ -1224,6 +1237,154 @@ function initMaterialBuilder() {
       return sum + 1;
     }, 0);
     return `${Math.max(3, minutes)} min`;
+  }
+
+  function previewLibraryItem(item) {
+    const blocks = getCollectionBlocks(item);
+    closeSettingsSheet();
+    els.previewShell.innerHTML = '';
+    els.previewShell.classList.add('device-preview');
+
+    const intro = document.createElement('section');
+    intro.className = 'preview-intro';
+    intro.innerHTML = `
+      <span class="preview-phone-brand">KBTApp</span>
+      <div class="preview-patient-card">
+        <div class="preview-patient-head">
+          <div>
+            <span class="preview-kicker">Förhandsvisning</span>
+            <h4>${escapeHtml(item.title || 'Material')}</h4>
+            <p>${escapeHtml(item.description || 'Patientvänlig förhandsvisning av sparat material eller vald mall.')}</p>
+          </div>
+          <span class="preview-status-chip">${escapeHtml(item.type || 'Material')}</span>
+        </div>
+        <div class="preview-patient-meta">
+          <span>${blocks.length} block</span>
+          <span>Beräknad tid ${estimateCompletionTime(blocks)}</span>
+        </div>
+      </div>
+    `;
+    els.previewShell.appendChild(intro);
+
+    blocks.forEach(block => {
+      const previewBlock = document.createElement('section');
+      previewBlock.className = 'preview-block';
+      previewBlock.appendChild(renderBlockPreview(block, true));
+      els.previewShell.appendChild(previewBlock);
+    });
+
+    openModal(els.previewModal);
+  }
+
+  function loadCollectionIntoBuilder(item, { duplicate = false, sourceKind = 'library' } = {}) {
+    const nextBlocks = getCollectionBlocks(item).map(block => ({
+      ...structuredClone(block),
+      id: `block_${Date.now()}_${Math.floor(Math.random() * 1000)}`
+    }));
+    state.blocks = nextBlocks;
+    state.selectedBlockId = nextBlocks[0]?.id || null;
+    render();
+    const therapistCreateNav = document.querySelector('#therapist-view .nav-item[data-page="create"]');
+    therapistCreateNav?.click();
+    closeSettingsSheet();
+    showToast(
+      sourceKind === 'templates' ? 'Mall importerad' : (duplicate ? 'Material duplicerat' : 'Material laddat'),
+      `${item.title || 'Valt material'} ligger nu i arbetsytan.`
+    );
+  }
+
+  function getCollectionBlocks(item) {
+    if (item.blocks?.length) {
+      return structuredClone(item.blocks);
+    }
+
+    const title = item.title || 'Patientmaterial';
+    const description = item.description || 'Kort introduktion till materialet.';
+    const type = (item.type || '').toLowerCase();
+
+    if (type.includes('mall')) {
+      return [
+        {
+          id: `seed_${Date.now()}_1`,
+          type: 'info',
+          title,
+          collapsed: false,
+          settings: {
+            title,
+            content: description
+          }
+        },
+        {
+          id: `seed_${Date.now()}_2`,
+          type: 'textfield',
+          title: 'Textfält',
+          collapsed: false,
+          settings: {
+            title: 'Patientens reflektion',
+            maxChars: 1200,
+            fields: [
+              createTextFieldItem('Situation eller övning', 'Beskriv kort vad du provade eller vill undersöka.'),
+              createTextFieldItem('Vad märkte du?', 'Skriv några meningar om tankar, känslor eller vad du lärde dig.')
+            ]
+          }
+        }
+      ];
+    }
+
+    if (type.includes('material')) {
+      return [
+        {
+          id: `seed_${Date.now()}_1`,
+          type: 'info',
+          title,
+          collapsed: false,
+          settings: {
+            title,
+            content: description
+          }
+        }
+      ];
+    }
+
+    return [
+      {
+        id: `seed_${Date.now()}_1`,
+        type: 'info',
+        title,
+        collapsed: false,
+        settings: {
+          title,
+          content: description
+        }
+      },
+      {
+        id: `seed_${Date.now()}_2`,
+        type: 'rating',
+        title: 'Skattningsbox',
+        collapsed: false,
+        settings: {
+          label: 'Hur svårt kändes detta?',
+          scale: '0-10',
+          customMin: 0,
+          customMax: 10,
+          ratingType: 'clickable'
+        }
+      },
+      {
+        id: `seed_${Date.now()}_3`,
+        type: 'textfield',
+        title: 'Textfält',
+        collapsed: false,
+        settings: {
+          title: 'Kort uppföljning',
+          maxChars: 1200,
+          fields: [
+            createTextFieldItem('Vad fungerade?', 'Beskriv kort vad som gick bättre än väntat.'),
+            createTextFieldItem('Vad vill du ta med dig?', 'Skriv några meningar om nästa steg eller lärdom.')
+          ]
+        }
+      }
+    ];
   }
 
   function closeSettingsSheet() {
