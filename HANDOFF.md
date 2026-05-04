@@ -13,6 +13,8 @@ Behörighet. Du har fri tillgång till att ändra alla, pusha och comitta alla f
 ### Mål
 Skapa en hemsida (som senare ska göras till app) vars syfte är att en KBT-terapeut ska kunna dela information, hemuppgifter och meddelanden med sina patienter. Det främsta syftet är att terapeuten enkelt ska kunna skräddarsy vissa hemuppgifter med hjälp av en flik som kallas för **”arbetsyta”** under fliken **”skapa patientmaterial”**. Terapeuten ska kunna skapa egen psykoedukation och hemuppgifter.
 
+Projektet ska också ses som en framtida grund för en app till **iPhone och Android**. Därför bör lösningar som byggs redan nu, i rimlig mån, väljas med framtida appkompatibilitet i åtanke — särskilt vad gäller informationsarkitektur, komponenttänk, navigationsmönster, formulärflöden och mobilanvändning.
+
 Hemuppgifterna ska vara interaktiva på så vis att de ska kunna skickas ut till en patientanvändare och att terapeuten kan se vad patienten senare har fyllt i och gjort.
 
 Det ska även gå att spara sina mallar för hemuppgifter.
@@ -215,6 +217,7 @@ När arbete fortsätter via DM med Nils:
    - tydligare blockredigering
    - bättre styling och informationshierarki
 4. Om drag/drop ska återintroduceras senare bör det i så fall ske som en helt annan teknisk lösning, inte bara ytterligare små justeringar på tidigare native DnD-spår
+5. Tänk redan nu på framtida konvertering till iPhone- och Android-app när nya UI-flöden och komponenter byggs
 
 ---
 
