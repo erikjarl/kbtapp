@@ -220,6 +220,20 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .icon-button{width:40px;height:40px;padding:0;background:#fbfaf8}
 .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
 .preview-shell{max-height:min(72vh,860px);overflow:auto;padding-right:4px;display:grid;gap:14px}
+.assignment-modal-card{width:min(1100px,100%)}
+.assignment-shell{max-height:min(74vh,900px);padding-right:0}
+.assignment-stage{display:grid;gap:16px;padding:18px;border-radius:24px;background:linear-gradient(180deg,#f7f3ee,#ffffff);border:1px solid #e7e1d9}
+.assignment-stage h4{margin:0;font-size:1.45rem}
+.assignment-stage p{margin:0;color:#5f5852}
+.assignment-form-card{background:#fbfaf8;border:1px solid #e7e1d9;border-radius:18px;padding:18px}
+.assignment-input,.assignment-textarea,.assignment-table-input{width:100%;border:1px solid #d8d2ca;border-radius:12px;padding:12px;background:#fff;color:#1f1b18}
+.assignment-textarea{min-height:140px;resize:vertical}
+.assignment-rating-row,.assignment-emoji-row{display:flex;flex-wrap:wrap;gap:10px}
+.assignment-rating-button,.assignment-emoji-button{border:1px solid #d9d3cc;background:#fff;border-radius:14px;padding:10px 12px;cursor:pointer;min-width:48px;transition:all .15s ease}
+.assignment-rating-button.active,.assignment-emoji-button.active{background:#1f1b18;color:#fff;border-color:#1f1b18;box-shadow:0 8px 18px rgba(31,27,24,0.14)}
+.assignment-slider-wrap{display:grid;gap:12px}
+.assignment-slider-meta{display:flex;justify-content:space-between;gap:10px;color:#6b645e;font-size:.82rem}
+.assignment-slider{width:100%}
 .preview-intro{display:grid;gap:14px;padding:22px;border-radius:24px;background:linear-gradient(180deg,#f7f3ee,#ffffff);border:1px solid #e7e1d9}
 .preview-kicker{display:inline-block;font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:#7b746d;font-weight:800;margin-bottom:6px}
 .preview-intro h4{margin:0 0 6px;font-size:1.6rem}
@@ -280,4 +294,6 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
   .emoji-row{grid-template-columns:repeat(3,minmax(0,1fr))}
   .toast-area{left:16px;right:16px;bottom:76px}
   .toast{min-width:0}
+  .assignment-stage{padding:14px}
+  .assignment-form-card{padding:14px}
 }

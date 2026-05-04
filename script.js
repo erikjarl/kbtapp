@@ -119,7 +119,8 @@ function initMaterialBuilder() {
     selectedBlockId: null,
     suppressLibraryClickUntil: 0,
     assignedPatientId: patients[0].id,
-    activeClientPatientId: patients[0].id
+    activeClientPatientId: patients[0].id,
+    activeAssignmentId: null
   };
 
   const collapsedTypes = new Set(['rating', 'textfield', 'table', 'emoji', 'info']);
@@ -142,6 +143,10 @@ function initMaterialBuilder() {
     clientAssignmentsGrid: document.getElementById('client-assignments-grid'),
     clientMaterialsGrid: document.getElementById('client-materials-grid'),
     therapistSubmissionsGrid: document.getElementById('therapist-submissions-grid'),
+    assignmentModal: document.getElementById('assignment-modal'),
+    assignmentShell: document.getElementById('assignment-shell'),
+    assignmentModalTitle: document.getElementById('assignment-modal-title'),
+    submitAssignmentModal: document.getElementById('submit-assignment-modal'),
     toastArea: document.getElementById('toast-area')
   };
 
@@ -198,7 +203,12 @@ function initMaterialBuilder() {
         const type = btn.dataset.closeModal;
         if (type === 'preview') closeModal(els.previewModal);
         if (type === 'assign') closeModal(els.assignModal);
+        if (type === 'assignment') closeModal(els.assignmentModal);
       });
+    });
+    els.submitAssignmentModal?.addEventListener('click', () => {
+      if (state.activeAssignmentId) submitAssignment(state.activeAssignmentId);
+      closeModal(els.assignmentModal);
     });
   }
 
@@ -708,10 +718,166 @@ function initMaterialBuilder() {
     assigned.forEach(item => {
       const card = document.createElement('div');
       card.className = 'card';
-      card.innerHTML = `<h3>${escapeHtml(item.title)}</h3><p>Status: ${escapeHtml(item.status)}</p><p>${item.blocks.length} block · tilldelad ${escapeHtml(item.createdAt)}</p><button class="builder-action accent" type="button">Skicka in till terapeut</button>`;
-      card.querySelector('button').addEventListener('click', () => submitAssignment(item.id));
+      card.innerHTML = `<h3>${escapeHtml(item.title)}</h3><p>Status: ${escapeHtml(item.status)}</p><p>${item.blocks.length} block · tilldelad ${escapeHtml(item.createdAt)}</p><div class="builder-toolbar"><button class="builder-action" type="button">Öppna formulär</button><button class="builder-action accent" type="button">Skicka in till terapeut</button></div>`;
+      const [openBtn, submitBtn] = card.querySelectorAll('button');
+      openBtn.addEventListener('click', () => openAssignment(item.id));
+      submitBtn.addEventListener('click', () => submitAssignment(item.id));
       els.clientAssignmentsGrid.appendChild(card);
     });
+  }
+
+  function openAssignment(assignmentId) {
+    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+    const item = assigned.find(entry => entry.id === assignmentId);
+    if (!item || !els.assignmentShell) return;
+    state.activeAssignmentId = assignmentId;
+    if (els.assignmentModalTitle) els.assignmentModalTitle.textContent = item.title;
+    els.assignmentShell.innerHTML = '';
+
+    const stage = document.createElement('section');
+    stage.className = 'assignment-stage';
+    stage.innerHTML = `<div><h4>${escapeHtml(item.title)}</h4><p>Fyll i formuläret nedan som patient. Detta är ett fönster i fönstret för att ge mer plats åt själva genomförandet.</p></div>`;
+    els.assignmentShell.appendChild(stage);
+
+    item.blocks.forEach((block, index) => {
+      const card = document.createElement('section');
+      card.className = 'assignment-form-card';
+      const content = renderInteractiveAssignmentBlock(item, block, index);
+      card.appendChild(content);
+      els.assignmentShell.appendChild(card);
+    });
+
+    openModal(els.assignmentModal);
+  }
+
+  function renderInteractiveAssignmentBlock(assignment, block, blockIndex) {
+    const wrap = document.createElement('div');
+    const answers = assignment.answers || (assignment.answers = {});
+    const answerKey = block.id;
+    switch (block.type) {
+      case 'info': {
+        const title = document.createElement('h4');
+        title.textContent = block.settings.title || 'Informationstext';
+        const text = document.createElement('p');
+        text.className = 'preview-text';
+        text.textContent = block.settings.content || 'Ingen text ännu.';
+        wrap.append(title, text);
+        break;
+      }
+      case 'textfield': {
+        wrap.innerHTML = `<div class="block-title">${escapeHtml(block.settings.label || 'Textfält')}</div>`;
+        const field = document.createElement('textarea');
+        field.className = 'assignment-textarea';
+        field.maxLength = block.settings.maxChars || 2000;
+        field.placeholder = 'Skriv ditt svar här...';
+        field.value = answers[answerKey]?.text || '';
+        field.addEventListener('input', e => updateAssignmentAnswer(assignment.id, answerKey, { text: e.target.value }));
+        wrap.appendChild(field);
+        break;
+      }
+      case 'rating': {
+        const label = document.createElement('div');
+        label.className = 'block-title';
+        label.textContent = block.settings.label || 'Skattningsbox';
+        wrap.appendChild(label);
+        const { min, max } = getScaleRange(block.settings);
+        if (block.settings.ratingType === 'slider') {
+          const sliderWrap = document.createElement('div');
+          sliderWrap.className = 'assignment-slider-wrap';
+          sliderWrap.innerHTML = `<div class="assignment-slider-meta"><span>${min}</span><span>${max}</span></div>`;
+          const input = document.createElement('input');
+          input.type = 'range';
+          input.className = 'assignment-slider';
+          input.min = min;
+          input.max = max;
+          input.value = answers[answerKey]?.value ?? Math.round((min + max) / 2);
+          input.addEventListener('input', e => updateAssignmentAnswer(assignment.id, answerKey, { value: Number(e.target.value) }));
+          sliderWrap.appendChild(input);
+          wrap.appendChild(sliderWrap);
+        } else {
+          const row = document.createElement('div');
+          row.className = 'assignment-rating-row';
+          getScaleValues(min, max).forEach(value => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `assignment-rating-button ${(answers[answerKey]?.value === value) ? 'active' : ''}`;
+            btn.textContent = value;
+            btn.addEventListener('click', () => {
+              updateAssignmentAnswer(assignment.id, answerKey, { value });
+              openAssignment(assignment.id);
+            });
+            row.appendChild(btn);
+          });
+          wrap.appendChild(row);
+        }
+        break;
+      }
+      case 'table': {
+        const title = document.createElement('div');
+        title.className = 'block-title';
+        title.textContent = `Tabellblock ${blockIndex + 1}`;
+        wrap.appendChild(title);
+        const box = document.createElement('div');
+        box.className = 'table-wrapper';
+        const table = document.createElement('table');
+        table.className = 'material-table';
+        const tbody = document.createElement('tbody');
+        block.settings.cells.forEach((row, rowIndex) => {
+          const tr = document.createElement('tr');
+          row.forEach((cell, colIndex) => {
+            const isHeader = block.settings.headerRow && rowIndex === 0;
+            const td = document.createElement(isHeader ? 'th' : 'td');
+            if (cell.type === 'patient' && !isHeader) {
+              const input = document.createElement('textarea');
+              input.className = 'assignment-table-input';
+              input.placeholder = 'Skriv här';
+              input.value = answers[answerKey]?.[`cell_${rowIndex}_${colIndex}`] || '';
+              input.addEventListener('input', e => updateAssignmentAnswer(assignment.id, answerKey, { [`cell_${rowIndex}_${colIndex}`]: e.target.value }));
+              td.appendChild(input);
+            } else {
+              td.textContent = cell.text || 'Tom statisk cell';
+            }
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        box.appendChild(table);
+        wrap.appendChild(box);
+        break;
+      }
+      case 'emoji': {
+        const label = document.createElement('div');
+        label.className = 'block-title';
+        label.textContent = block.settings.label || 'Emoji-skala';
+        wrap.appendChild(label);
+        const row = document.createElement('div');
+        row.className = 'assignment-emoji-row';
+        emojiScale.forEach((item, index) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `assignment-emoji-button ${(answers[answerKey]?.value === index + 1) ? 'active' : ''}`;
+          btn.innerHTML = `<span class="emoji-char">${item.emoji}</span><span class="emoji-tone">${item.label}</span>`;
+          btn.addEventListener('click', () => {
+            updateAssignmentAnswer(assignment.id, answerKey, { value: index + 1 });
+            openAssignment(assignment.id);
+          });
+          row.appendChild(btn);
+        });
+        wrap.appendChild(row);
+        break;
+      }
+    }
+    return wrap;
+  }
+
+  function updateAssignmentAnswer(assignmentId, blockId, patch) {
+    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+    const item = assigned.find(entry => entry.id === assignmentId);
+    if (!item) return;
+    item.answers = item.answers || {};
+    item.answers[blockId] = { ...(item.answers[blockId] || {}), ...patch };
+    localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
   }
 
   function renderClientMaterials() {

@@ -40,7 +40,7 @@
         </a>
       </div>
       <p class="login-note">Detta är frontend-demovyer. Inga riktiga användarkonton eller patientdata används ännu.</p>
-      <p class="login-updated">Uppdaterades: 2026-05-04 12:55 CEST</p>
+      <p class="login-updated">Uppdaterades: 2026-05-04 14:02 CEST</p>
     </div>
   </section>
 
@@ -414,6 +414,26 @@
       <div class="modal-actions">
         <button class="builder-action" type="button" data-close-modal="assign">Avbryt</button>
         <button class="builder-action accent" type="button" id="confirm-assign">Tilldela material</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay-modal" id="assignment-modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="assignment"></div>
+    <div class="modal-card modal-large assignment-modal-card">
+      <div class="modal-head">
+        <div>
+          <span class="builder-eyebrow">Patientens formulärläge</span>
+          <h3 id="assignment-modal-title">Genomför hemuppgift</h3>
+        </div>
+        <button class="icon-button" type="button" data-close-modal="assignment" aria-label="Stäng formulär">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="preview-shell assignment-shell" id="assignment-shell"></div>
+      <div class="modal-actions">
+        <button class="builder-action" type="button" data-close-modal="assignment">Stäng</button>
+        <button class="builder-action accent" type="button" id="submit-assignment-modal">Skicka in till terapeut</button>
       </div>
     </div>
   </div>
