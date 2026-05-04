@@ -18,11 +18,12 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 #login-view{display:none;align-items:center;justify-content:center;background:linear-gradient(180deg,#fbf7f1 0%,#f5efe6 100%);position:relative;min-height:100vh;padding:20px;overflow:hidden}
 #login-view.active{display:flex}
 .login-bg{position:absolute;inset:0;background:radial-gradient(circle at 18% 24%, rgba(76,201,190,.22) 0 14%, transparent 15%),radial-gradient(circle at 82% 18%, rgba(244,176,120,.20) 0 12%, transparent 13%),radial-gradient(circle at 15% 78%, rgba(133,153,120,.22) 0 18%, transparent 19%),radial-gradient(circle at 88% 76%, rgba(244,232,160,.28) 0 16%, transparent 17%),url('https://images.unsplash.com/photo-1516302752625-fcc3c50ae61f?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat;opacity:0.18;z-index:0}
-.login-card{position:relative;z-index:1;background:rgba(255,252,247,0.84);backdrop-filter:blur(24px);border-radius:48px;padding:48px 40px 32px;max-width:760px;width:100%;text-align:center;box-shadow:0 30px 80px rgba(57,43,31,0.10),0 0 0 1px rgba(255,255,255,0.55);overflow:hidden}
-.login-orb{position:absolute;border-radius:999px;pointer-events:none;filter:blur(.2px);opacity:.95}
-.orb-a{width:220px;height:220px;background:#35d3c8;left:-110px;top:72px}
-.orb-b{width:130px;height:130px;background:#ffd8c7;right:36px;top:106px}
-.orb-c{width:84px;height:84px;background:#f6eea4;right:102px;top:154px}
+.login-card{position:relative;z-index:1;background:rgba(255,252,247,0.84);backdrop-filter:blur(24px);border-radius:48px;padding:48px 40px 32px;max-width:760px;width:100%;text-align:center;box-shadow:0 30px 80px rgba(57,43,31,0.10),0 0 0 1px rgba(255,255,255,0.55);overflow:hidden;isolation:isolate}
+.login-card > *:not(.login-orb){position:relative;z-index:1}
+.login-orb{position:absolute;border-radius:999px;pointer-events:none;filter:blur(.2px);opacity:.38;z-index:0}
+.orb-a{width:220px;height:220px;background:#35d3c8;left:-128px;top:128px}
+.orb-b{width:130px;height:130px;background:#ffd8c7;right:-18px;top:86px}
+.orb-c{width:84px;height:84px;background:#f6eea4;right:62px;top:198px}
 .login-logo{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:6px}
 .logotype{width:44px;height:44px;color:#2e7d78}
 .login-brand{font-family:'Cormorant Garamond',Georgia,serif;font-size:1.8rem;font-weight:600;color:#241f1b}
@@ -402,9 +403,9 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
   .preview-patient-head{flex-direction:column}
   .assignment-form-card{padding:14px}
   .login-card{padding:28px 18px 24px;border-radius:34px}
-  .orb-a{width:150px;height:150px;left:-78px;top:94px}
-  .orb-b{width:94px;height:94px;right:14px;top:146px}
-  .orb-c{width:58px;height:58px;right:78px;top:176px}
+  .orb-a{width:124px;height:124px;left:-70px;top:142px;opacity:.26}
+  .orb-b{width:78px;height:78px;right:-18px;top:172px;opacity:.24}
+  .orb-c{width:48px;height:48px;right:34px;top:238px;opacity:.22}
   .feature-copy h2{font-size:2rem}
   .feature-visual img{width:92%;height:220px}
 }
