@@ -145,20 +145,20 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .builder-action.accent{background:#1f1b18;color:#f7f4ef;border-color:#1f1b18}
 .builder-action.danger{color:#9b4f43;border-color:#e6c8c0;background:#fff8f6}
 .builder-action.ghost{padding:8px 12px;font-size:.84rem}
-.builder-layout{display:grid;grid-template-columns:minmax(220px,280px) minmax(320px,1fr) minmax(260px,320px);gap:14px;align-items:start}
-.builder-panel,.builder-canvas{min-height:620px}
+.builder-layout{display:grid;grid-template-columns:minmax(240px,296px) minmax(0,1fr) minmax(252px,312px);gap:14px;align-items:start}
+.builder-panel,.builder-canvas{min-height:620px;min-width:0}
 .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
 .panel-head h3{margin-bottom:0;font-size:1.2rem}
 .canvas-count{font-size:0.82rem;color:#6b645e;background:#f5f2ed;border-radius:999px;padding:7px 10px}
-.block-library{display:grid;gap:10px}
-.library-block{position:relative;display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;padding:14px;border-radius:14px;border:1px solid #e1ddd7;background:linear-gradient(180deg,#fff 0%,#fbfaf8 100%);cursor:pointer;transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+.block-library{display:grid;gap:10px;min-width:0}
+.library-block{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"icon badge" "icon text";align-items:start;column-gap:12px;row-gap:6px;width:100%;text-align:left;padding:14px;border-radius:14px;border:1px solid #e1ddd7;background:linear-gradient(180deg,#fff 0%,#fbfaf8 100%);cursor:pointer;transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease;min-width:0;overflow:hidden}
 .library-block:hover{border-color:#b4c4d4;transform:translateY(-1px);box-shadow:0 12px 24px rgba(31,27,24,0.06)}
-.library-block > span:last-child{min-width:0}
-.library-block strong{display:block;font-size:0.95rem}
-.library-block small{display:block;color:#6b645e;line-height:1.45;margin-top:2px}
-.library-icon{width:38px;height:38px;border-radius:12px;background:#f0f3f7;color:#2b5f8a;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.library-block > span:last-child{grid-area:text;min-width:0}
+.library-block strong{display:block;font-size:0.95rem;line-height:1.25;overflow-wrap:anywhere}
+.library-block small{display:block;color:#6b645e;line-height:1.4;margin-top:4px;overflow-wrap:anywhere}
+.library-icon{grid-area:icon;width:38px;height:38px;border-radius:12px;background:#f0f3f7;color:#2b5f8a;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .library-icon svg{width:20px;height:20px}
-.library-add-badge{margin-left:auto;font-size:0.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#2b5f8a;background:#eef3f8;border:1px solid #d6e0ea;border-radius:999px;padding:5px 8px;flex-shrink:0}
+.library-add-badge{grid-area:badge;justify-self:start;font-size:0.68rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#2b5f8a;background:#eef3f8;border:1px solid #d6e0ea;border-radius:999px;padding:4px 8px;flex-shrink:0}
 .dropzone{position:relative;min-height:540px;border:2px dashed #d7d1c9;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,0.85),rgba(248,246,242,0.98));padding:16px;transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;overflow:hidden;display:grid;grid-template-rows:auto 1fr}
 .dropzone::after{content:'';position:absolute;inset:14px;border-radius:18px;border:1px solid rgba(215,209,201,0.45);pointer-events:none}
 .dropzone-header{display:flex;align-items:center;justify-content:flex-start;padding:4px 2px 16px;color:#6b645e}
@@ -314,8 +314,15 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .toast small{display:block;opacity:.78}
 
 /* === Responsive === */
+@media(max-width:1240px){
+  .builder-layout{grid-template-columns:minmax(224px,252px) minmax(0,1fr) minmax(236px,280px);gap:12px}
+  .library-block{padding:12px;column-gap:10px}
+  .library-block strong{font-size:.9rem}
+  .library-block small{font-size:.82rem;line-height:1.35}
+  .library-add-badge{font-size:.64rem;padding:4px 7px}
+}
 @media(max-width:1120px){
-  .builder-layout{grid-template-columns:240px 1fr}
+  .builder-layout{grid-template-columns:248px minmax(0,1fr)}
   .settings-panel{grid-column:1/-1;min-height:auto}
 }
 @media(max-width:860px){
