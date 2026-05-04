@@ -156,19 +156,19 @@ function initMaterialBuilder() {
   };
 
   const materialSeed = [
-    { title: 'Sömnregistrering', description: 'Typ: Hemuppgift · status: aktiv mall' },
-    { title: 'Beteendeaktivering – vecka 1', description: 'Typ: Hemuppgift · status: sparad version' },
-    { title: 'Psykoedukation om oro', description: 'Typ: Material · status: publicerbar' }
+    { title: 'Sömnregistrering', description: 'Kvällsvanor, uppvaknanden och kort morgonreflektion för en lugn veckoöverblick.', meta: ['7–10 min', 'Aktiv mall'], type: 'Hemuppgift' },
+    { title: 'Beteendeaktivering – vecka 1', description: 'Tre små aktiviteter med energiskattning före och efter samt uppföljningsfråga.', meta: ['10–15 min', 'Sparad version'], type: 'Hemuppgift' },
+    { title: 'Psykoedukation om oro', description: 'Patientvänlig genomgång av oro, undvikande och varför exponering hjälper på sikt.', meta: ['4 min läsning', 'Publicerbar'], type: 'Material' }
   ];
   const clientMaterialSeed = [
-    { title: 'Vad är oro?', description: 'Psykoedukation · läst 80%' },
-    { title: 'Sömn och återhämtning', description: 'Artikel · sparad' },
-    { title: 'Andningsövning', description: 'Övning · redo att öppnas' }
+    { title: 'Vad är oro?', description: 'Kort introduktion med varm ton och konkreta exempel från vardagen.', meta: ['Läst 80%', '2 min kvar'], type: 'Material' },
+    { title: 'Sömn och återhämtning', description: 'Lugn artikel om kvällsrutiner, skärmtid och återhämtning mellan sessioner.', meta: ['Sparad', 'Lästid 5 min'], type: 'Material' },
+    { title: 'Andningsövning', description: 'Guidad mikropaus för att landa innan en uppgift eller efter en intensiv dag.', meta: ['2 minuter', 'Redo att öppnas'], type: 'Övning' }
   ];
   const templateSeed = [
-    { title: 'Tankefälla – registrering', description: 'Importera till arbetsytan och skapa patientversion.' },
-    { title: 'Exponering – planeringsblad', description: 'Bas för gradvis exponering med anpassningsbara steg.' },
-    { title: 'Värderad riktning', description: 'Mall för ACT-inspirerad reflektionsövning.' }
+    { title: 'Tankefälla – registrering', description: 'Situation, automatisk tanke, alternativ tanke och nästa lilla test i ett tydligt flöde.', meta: ['4 block', 'Redo att importera'], type: 'Mall' },
+    { title: 'Exponering – planeringsblad', description: 'Trappa med förväntad SUDS, faktisk upplevelse och lärdom efteråt.', meta: ['6 block', 'Vanlig i KBT'], type: 'Mall' },
+    { title: 'Värderad riktning', description: 'ACT-inspirerad övning om riktning, hinder och ett litet steg till nästa vecka.', meta: ['5 block', 'Lugn ton'], type: 'Mall' }
   ];
 
   bindPanelLibrary();
@@ -193,13 +193,16 @@ function initMaterialBuilder() {
     document.getElementById('preview-material').addEventListener('click', openPreview);
     document.getElementById('save-template').addEventListener('click', () => saveCollection('templates'));
     document.getElementById('save-library').addEventListener('click', () => saveCollection('library'));
-    document.getElementById('assign-patient').addEventListener('click', () => openModal(els.assignModal));
+    document.getElementById('assign-patient').addEventListener('click', () => {
+      closeSettingsSheet();
+      openModal(els.assignModal);
+    });
     document.getElementById('confirm-assign').addEventListener('click', assignPatient);
 
     const openSettings = document.getElementById('open-settings');
     const closeSettings = document.getElementById('close-settings');
     if (openSettings) openSettings.addEventListener('click', () => els.settingsPanel.classList.add('open'));
-    if (closeSettings) closeSettings.addEventListener('click', () => els.settingsPanel.classList.remove('open'));
+    if (closeSettings) closeSettings.addEventListener('click', closeSettingsSheet);
   }
 
   function bindModals() {
@@ -722,6 +725,7 @@ function initMaterialBuilder() {
   }
 
   function openPreview() {
+    closeSettingsSheet();
     els.previewShell.innerHTML = '';
     els.previewShell.classList.add('device-preview');
     if (!state.blocks.length) {
@@ -731,14 +735,22 @@ function initMaterialBuilder() {
       const intro = document.createElement('section');
       intro.className = 'preview-intro';
       intro.innerHTML = `
-        <div>
-          <span class="preview-kicker">Patientvy</span>
-          <h4>${escapeHtml(getMaterialTitle())}</h4>
-          <p>Så här möter materialet patienten i samma fönster, med lugn läsrytm och tydliga block.</p>
-        </div>
-        <div class="preview-meta-pills">
-          <span>${state.blocks.length} block</span>
-          <span>${escapeHtml(patient ? patient.name : 'Ingen vald patient')}</span>
+        <span class="preview-phone-brand">KBTApp</span>
+        <div class="preview-patient-card">
+          <div class="preview-patient-head">
+            <div>
+              <span class="preview-kicker">Patientvy</span>
+              <h4>${escapeHtml(getMaterialTitle())}</h4>
+              <p>Så här möter materialet patienten i mobilen: varm ton, kort orientering och tydliga nästa steg.</p>
+            </div>
+            <span class="preview-status-chip">Redo att fyllas i</span>
+          </div>
+          <div class="preview-patient-meta">
+            <span>${state.blocks.length} block</span>
+            <span>${escapeHtml(patient ? patient.name : 'Ingen vald patient')}</span>
+            <span>Beräknad tid ${estimateCompletionTime()}</span>
+          </div>
+          <div class="preview-helper-note">Målet är att patienten snabbt ska förstå vad som ska göras, hur lång tid det tar och att det räcker att fylla i ett steg i taget.</div>
         </div>
       `;
       els.previewShell.appendChild(intro);
@@ -1035,17 +1047,28 @@ function initMaterialBuilder() {
 
   function renderCollectionGrid(target, seed, savedItems) {
     target.innerHTML = '';
-    seed.forEach(item => target.appendChild(createLibraryCard(item.title, item.description)));
+    seed.forEach(item => target.appendChild(createLibraryCard(item)));
     savedItems.forEach(item => {
-      target.appendChild(createLibraryCard(item.title, `${item.patient} · ${item.blocks.length} block · sparad ${item.createdAt}`));
+      target.appendChild(createLibraryCard({
+        title: item.title,
+        description: `${item.patient} · ${item.blocks.length} block · sparad ${item.createdAt}`,
+        meta: ['Klar att använda', 'Senast sparad'],
+        type: target.id === 'template-grid' ? 'Mall' : 'Hemuppgift'
+      }));
     });
   }
 
-  function createLibraryCard(title, description) {
+  function createLibraryCard(itemOrTitle, description = '') {
+    const item = typeof itemOrTitle === 'string'
+      ? { title: itemOrTitle, description }
+      : itemOrTitle;
+    const title = item.title;
+    const copy = item.description || description;
+    const type = item.type || (/mall/i.test(title + ' ' + copy) ? 'Mall' : /psykoedukation|artikel|material/i.test(copy) ? 'Material' : 'Hemuppgift');
+    const meta = item.meta?.length ? item.meta : ['Klar att använda', 'Mobilvänlig vy'];
     const card = document.createElement('div');
-    const type = /mall/i.test(title + ' ' + description) ? 'Mall' : /psykoedukation|artikel|material/i.test(description) ? 'Material' : 'Hemuppgift';
     card.className = 'card library-card';
-    card.innerHTML = `<div class="library-card-head"><div><span class="library-card-type">${escapeHtml(type)}</span><h3>${escapeHtml(title)}</h3></div></div><p>${escapeHtml(description)}</p><div class="library-card-meta"><span>Klar att använda</span><span>Mobilvänlig vy</span></div><div class="library-card-actions"><button class="builder-action" type="button">Öppna</button><button class="builder-action" type="button">Duplicera</button></div>`;
+    card.innerHTML = `<div class="library-card-head"><div><span class="library-card-type">${escapeHtml(type)}</span><h3>${escapeHtml(title)}</h3></div></div><p>${escapeHtml(copy)}</p><div class="library-card-meta">${meta.map(label => `<span>${escapeHtml(label)}</span>`).join('')}</div><div class="library-card-actions"><button class="builder-action" type="button">Öppna</button><button class="builder-action" type="button">Duplicera</button></div>`;
     return card;
   }
 
@@ -1189,6 +1212,22 @@ function initMaterialBuilder() {
       emoji: 'Emoji'
     };
     return labels[type] || type;
+  }
+
+
+  function estimateCompletionTime() {
+    const minutes = state.blocks.reduce((sum, block) => {
+      if (block.type === 'info') return sum + 1;
+      if (block.type === 'textfield') return sum + Math.max(2, (block.settings.fields?.length || 1) * 2);
+      if (block.type === 'table') return sum + 3;
+      if (block.type === 'rating' || block.type === 'emoji') return sum + 1;
+      return sum + 1;
+    }, 0);
+    return `${Math.max(3, minutes)} min`;
+  }
+
+  function closeSettingsSheet() {
+    els.settingsPanel?.classList.remove('open');
   }
 
   function openModal(element) {
