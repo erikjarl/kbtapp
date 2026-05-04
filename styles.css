@@ -17,6 +17,12 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .view.active{display:flex;flex-direction:column;min-height:100vh}
 #login-view{display:none;align-items:center;justify-content:center;background:linear-gradient(180deg,#fbf7f1 0%,#f5efe6 100%);position:relative;min-height:100vh;padding:20px;overflow:hidden}
 #login-view.active{display:flex}
+.view[data-app-view="therapist"],.view[data-app-view="client"]{position:relative;background:linear-gradient(180deg,#fcf7f1 0%,#f6efe5 100%);overflow:hidden}
+.view[data-app-view="therapist"]::before,.view[data-app-view="client"]::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 10% 12%, rgba(255,214,199,.26) 0 11%, transparent 12%),radial-gradient(circle at 92% 18%, rgba(120,211,196,.16) 0 13%, transparent 14%),radial-gradient(circle at 14% 78%, rgba(245,233,163,.24) 0 11%, transparent 12%),radial-gradient(circle at 88% 74%, rgba(170,222,208,.18) 0 12%, transparent 13%),url('https://images.unsplash.com/photo-1499209974431-9dddcece7f88?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat;opacity:.15;pointer-events:none;z-index:0}
+.view[data-app-view="therapist"]::after,.view[data-app-view="client"]::after{content:'';position:absolute;left:-80px;bottom:140px;width:220px;height:220px;border-radius:46% 54% 63% 37% / 40% 41% 59% 60%;background:rgba(244,176,120,.14);filter:blur(2px);pointer-events:none;z-index:0}
+.view[data-app-view="therapist"] .app-header,.view[data-app-view="therapist"] .side-nav,.view[data-app-view="therapist"] .bottom-nav,.view[data-app-view="therapist"] .app-main,.view[data-app-view="client"] .app-header,.view[data-app-view="client"] .side-nav,.view[data-app-view="client"] .bottom-nav,.view[data-app-view="client"] .app-main{position:relative;z-index:1}
+.view[data-app-view="therapist"] .app-main::before,.view[data-app-view="client"] .app-main::before{content:'';position:fixed;right:-70px;top:120px;width:240px;height:240px;border-radius:50%;background:rgba(239,244,161,.18);filter:blur(4px);pointer-events:none;z-index:-1}
+.view[data-app-view="therapist"] .app-main::after,.view[data-app-view="client"] .app-main::after{content:'';position:fixed;left:-80px;top:48%;width:220px;height:220px;border-radius:44% 56% 57% 43% / 55% 43% 57% 45%;background:rgba(92,206,194,.10);filter:blur(3px);pointer-events:none;z-index:-1}
 .login-bg{position:absolute;inset:0;background:radial-gradient(circle at 18% 24%, rgba(76,201,190,.22) 0 14%, transparent 15%),radial-gradient(circle at 82% 18%, rgba(244,176,120,.20) 0 12%, transparent 13%),radial-gradient(circle at 15% 78%, rgba(133,153,120,.22) 0 18%, transparent 19%),radial-gradient(circle at 88% 76%, rgba(244,232,160,.28) 0 16%, transparent 17%),url('https://images.unsplash.com/photo-1516302752625-fcc3c50ae61f?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat;opacity:0.18;z-index:0}
 .login-card{position:relative;z-index:1;background:rgba(255,252,247,0.96);backdrop-filter:blur(24px);border-radius:48px;padding:48px 40px 32px;max-width:760px;width:100%;text-align:center;box-shadow:0 30px 80px rgba(57,43,31,0.10),0 0 0 1px rgba(255,255,255,0.55);overflow:hidden;isolation:isolate}
 .login-card > *:not(.login-orb){position:relative;z-index:1}
@@ -70,20 +76,21 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .avatar{width:28px;height:28px;color:#6b645e}
 .avatar svg{width:100%;height:100%}
 .header-name{font-weight:500;font-size:0.9rem;color:#1f1b18}
-.side-nav{position:fixed;top:56px;left:0;bottom:0;width:240px;background:#faf9f7;border-right:1px solid #dedad4;padding:12px 10px;overflow-y:auto;z-index:10}
+.side-nav{position:fixed;top:56px;left:0;bottom:0;width:240px;background:rgba(255,250,245,.72);backdrop-filter:blur(18px);border-right:1px solid #eadfce;padding:12px 10px;overflow-y:auto;z-index:10}
 .side-nav .nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;margin-bottom:2px;color:#4a4440;font-weight:500;font-size:0.9rem;transition:all 0.15s}
 .side-nav .nav-item svg{width:20px;height:20px;flex-shrink:0}
 .side-nav .nav-item:hover{background:#eaebea}
 .side-nav .nav-item.active{background:#e0e6ed;color:#2b5f8a;font-weight:600}
 .side-nav .nav-item.logout{margin-top:auto;color:#b9816f}
 .side-nav .nav-item.logout:hover{background:#f3e8e5}
-.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:64px;background:rgba(243,242,239,0.95);backdrop-filter:blur(16px);border-top:1px solid #dedad4;justify-content:space-around;align-items:center;z-index:20}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:64px;background:rgba(255,248,241,0.92);backdrop-filter:blur(18px);border-top:1px solid #eadfce;justify-content:space-around;align-items:center;z-index:20}
 .bottom-item{display:flex;flex-direction:column;align-items:center;gap:2px;color:#6b645e;font-size:0.65rem;font-weight:500;padding:4px 8px;border-radius:10px;transition:all 0.15s}
 .bottom-item svg{width:22px;height:22px}
 .bottom-item.active{color:#2b5f8a}
 
 /* === Main / general cards === */
 .app-main{margin-left:240px;padding:20px 24px 80px;flex:1}
+.therapist-hero .hero-copy,.patient-hero .hero-copy,.builder-intro,.library-summary,.care-flow-card,.patient-spotlight-card,.integration-note{backdrop-filter:blur(4px)}
 .page{display:none}
 .page.active{display:block}
 .page-header{margin-bottom:20px}
