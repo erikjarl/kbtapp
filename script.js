@@ -272,11 +272,24 @@ function initMaterialBuilder() {
       case 'info':
         return { id, type, title: 'Informationstext', collapsed: collapsedTypes.has(type), settings: { title: 'Informationstext', content: 'Skriv instruktioner, sammanhang eller psykoedukation här.' } };
       case 'textfield':
-        return { id, type, title: 'Textfält', collapsed: collapsedTypes.has(type), settings: { label: 'Beskriv vad du lade märke till', maxChars: 2000 } };
+        return {
+          id,
+          type,
+          title: 'Textfält',
+          collapsed: collapsedTypes.has(type),
+          settings: {
+            title: 'Reflektionsfrågor',
+            maxChars: 2000,
+            fields: [
+              createTextFieldItem('Situation', 'Beskriv kort situationen eller övningen du vill att patienten ska återvända till.'),
+              createTextFieldItem('Vad lade du märke till?', 'Skriv några meningar om tankar, känslor eller kroppsliga reaktioner.')
+            ]
+          }
+        };
       case 'rating':
         return { id, type, title: 'Skattningsbox', collapsed: collapsedTypes.has(type), settings: { label: 'Ångestnivå', scale: '0-10', customMin: 0, customMax: 10, ratingType: 'clickable' } };
       case 'table':
-        return { id, type, title: 'Tabell', collapsed: collapsedTypes.has(type), settings: { rows: 3, cols: 3, headerRow: true, cells: createTableCells(3, 3) } };
+        return { id, type, title: 'Tabell', collapsed: collapsedTypes.has(type), settings: { rows: 3, cols: 3, headerRow: true, firstColumnHeaders: true, cells: createTableCells(3, 3) } };
       case 'emoji':
         return { id, type, title: 'Emoji-skala', collapsed: collapsedTypes.has(type), settings: { label: 'Hur känns det just nu?', defaultValue: 4 } };
       default:
@@ -416,10 +429,52 @@ function initMaterialBuilder() {
   }
 
   function renderTextFieldSettings(container, block) {
+    ensureTextFieldSettings(block);
+
     container.append(
-      createTextInput('Ledtext', block.settings.label, value => updateBlock(block.id, item => { item.settings.label = value; }, { preserveFocus: true }), 'textfield-label'),
-      createNumberInput('Max tecken', block.settings.maxChars, 50, 2000, value => updateBlock(block.id, item => { item.settings.maxChars = value; }, { preserveFocus: true }), 'textfield-maxchars')
+      createTextInput('Blockrubrik', block.settings.title, value => updateBlock(block.id, item => { ensureTextFieldSettings(item); item.settings.title = value; }, { preserveFocus: true }), 'textfield-title'),
+      createNumberInput('Max tecken per fält', block.settings.maxChars, 50, 2000, value => updateBlock(block.id, item => { item.settings.maxChars = value; }, { preserveFocus: true }), 'textfield-maxchars')
     );
+
+    const helper = document.createElement('div');
+    helper.className = 'inline-help';
+    helper.textContent = 'Lägg till flera fritextfält med egen rubrik. Exempeltexten rensas automatiskt när du börjar redigera ett nytt standardfält.';
+    container.appendChild(helper);
+
+    const fieldList = document.createElement('div');
+    fieldList.className = 'text-field-list';
+
+    block.settings.fields.forEach((fieldItem, index) => {
+      const card = document.createElement('div');
+      card.className = 'text-field-card';
+      card.innerHTML = `<div class="text-field-card-head"><strong>Fält ${index + 1}</strong>${block.settings.fields.length > 1 ? '<button class="builder-action danger ghost" type="button">Ta bort</button>' : ''}</div>`;
+
+      card.append(
+        createTextInput('Rubrik', fieldItem.title, value => updateBlock(block.id, item => { ensureTextFieldSettings(item); item.settings.fields[index].title = value; }, { preserveFocus: true }), `textfield-field-${index}-title`, false, fieldItem.defaultTitle),
+        createTextarea('Exempeltext / hjälp', fieldItem.prompt, value => updateBlock(block.id, item => { ensureTextFieldSettings(item); item.settings.fields[index].prompt = value; }, { preserveFocus: true }), `textfield-field-${index}-prompt`, { clearOnFocusValue: fieldItem.defaultPrompt })
+      );
+
+      const removeButton = card.querySelector('button');
+      if (removeButton) {
+        removeButton.addEventListener('click', () => updateBlock(block.id, item => {
+          ensureTextFieldSettings(item);
+          item.settings.fields.splice(index, 1);
+        }));
+      }
+
+      fieldList.appendChild(card);
+    });
+
+    const addButton = document.createElement('button');
+    addButton.className = 'builder-action';
+    addButton.type = 'button';
+    addButton.textContent = 'Lägg till fritextfält';
+    addButton.addEventListener('click', () => updateBlock(block.id, item => {
+      ensureTextFieldSettings(item);
+      item.settings.fields.push(createTextFieldItem(`Fritext ${item.settings.fields.length + 1}`, 'Skriv kort hjälpinstruktion eller exempeltext här.'));
+    }));
+
+    container.append(fieldList, addButton);
   }
 
   function renderRatingSettings(container, block) {
@@ -477,9 +532,24 @@ function initMaterialBuilder() {
     toggle.querySelector('input').addEventListener('change', event => updateBlock(block.id, item => { item.settings.headerRow = event.target.checked; }));
     container.appendChild(toggle);
 
+    const firstColumnToggle = document.createElement('div');
+    firstColumnToggle.className = 'toggle-row';
+    firstColumnToggle.innerHTML = `
+      <div>
+        <div class="field-label" style="margin-bottom:4px">Första kolumnen = radrubriker</div>
+        <div class="inline-help">Vänster kolumn visas som radrubriker i både redigeringsläge och patientförhandsvisning.</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" ${block.settings.firstColumnHeaders ? 'checked' : ''}/>
+        <span class="toggle-slider"></span>
+      </label>
+    `;
+    firstColumnToggle.querySelector('input').addEventListener('change', event => updateBlock(block.id, item => { item.settings.firstColumnHeaders = event.target.checked; }));
+    container.appendChild(firstColumnToggle);
+
     const helper = document.createElement('div');
     helper.className = 'inline-help';
-    helper.textContent = 'Dubbelklicka på en cell i tabellen nedan för snabb redigering. Varje cell kan växlas mellan statisk text och patientfält.';
+    helper.textContent = 'Dubbelklicka på en cell i tabellen nedan för snabb redigering. Första raden kan vara kolumnrubriker och första kolumnen kan användas som radrubriker.';
     container.appendChild(helper);
 
     const preview = renderBlockPreview(block, false);
@@ -490,12 +560,21 @@ function initMaterialBuilder() {
     block.settings.cells.forEach((row, rowIndex) => {
       row.forEach((cell, colIndex) => {
         const editor = document.createElement('div');
-        editor.className = `cell-editor-card ${block.settings.headerRow && rowIndex === 0 ? 'is-header' : ''}`;
-        editor.innerHTML = `<strong>Cell ${rowIndex + 1}.${colIndex + 1}</strong>`;
+        const isHeader = block.settings.headerRow && rowIndex === 0;
+        const isRowHeader = block.settings.firstColumnHeaders && colIndex === 0 && (!block.settings.headerRow || rowIndex > 0);
+        editor.className = `cell-editor-card ${isHeader || isRowHeader ? 'is-header' : ''}`;
+        editor.innerHTML = `<strong>${isHeader ? `Kolumnrubrik ${colIndex + 1}` : isRowHeader ? `Radrubrik ${rowIndex}` : `Cell ${rowIndex + 1}.${colIndex + 1}`}</strong>`;
         editor.append(
-          createTextInput('Text', cell.text, value => updateBlock(block.id, item => { item.settings.cells[rowIndex][colIndex].text = value; }, { preserveFocus: true }), `table-${rowIndex}-${colIndex}-text`, true),
+          createTextInput('Text', cell.text, value => updateBlock(block.id, item => { item.settings.cells[rowIndex][colIndex].text = value; }, { preserveFocus: true }), `table-${rowIndex}-${colIndex}-text`, true, getDefaultTableCellText(rowIndex, colIndex)),
           createToggle(cell.type === 'patient', checked => updateBlock(block.id, item => { item.settings.cells[rowIndex][colIndex].type = checked ? 'patient' : 'static'; }), 'Patientfält', 'Låt patienten fylla i denna cell')
         );
+
+        if (isHeader || isRowHeader) {
+          const badge = document.createElement('div');
+          badge.className = 'inline-help';
+          badge.textContent = isHeader ? 'Visas överst som kolumnrubrik.' : 'Visas till vänster som radrubrik.';
+          editor.appendChild(badge);
+        }
         cellGrid.appendChild(editor);
       });
     });
@@ -523,13 +602,25 @@ function initMaterialBuilder() {
         break;
       }
       case 'textfield': {
-        const label = document.createElement('div');
-        label.className = 'block-title';
-        label.textContent = block.settings.label || 'Textfält';
-        const field = document.createElement('div');
-        field.className = 'patient-field-preview';
-        field.textContent = `Patientens svar skrivs här · max ${block.settings.maxChars} tecken`;
-        wrap.append(label, field);
+        ensureTextFieldSettings(block);
+        const title = document.createElement('div');
+        title.className = 'block-title';
+        title.textContent = block.settings.title || 'Textfält';
+        wrap.appendChild(title);
+
+        const list = document.createElement('div');
+        list.className = 'text-field-preview-list';
+        block.settings.fields.forEach(fieldItem => {
+          const fieldWrap = document.createElement('div');
+          fieldWrap.className = 'text-field-preview-item';
+          fieldWrap.innerHTML = `<div class="text-field-preview-head"><strong>${escapeHtml(fieldItem.title || 'Fritextfält')}</strong>${fieldItem.prompt ? `<small>${escapeHtml(compactText(fieldItem.prompt, isReadOnly ? 140 : 72))}</small>` : ''}</div>`;
+          const field = document.createElement('div');
+          field.className = 'patient-field-preview';
+          field.textContent = `Patientens svar skrivs här · max ${block.settings.maxChars} tecken`;
+          fieldWrap.appendChild(field);
+          list.appendChild(fieldWrap);
+        });
+        wrap.appendChild(list);
         break;
       }
       case 'rating': {
@@ -579,9 +670,10 @@ function initMaterialBuilder() {
           const tr = document.createElement('tr');
           row.forEach((cell, colIndex) => {
             const isHeader = block.settings.headerRow && rowIndex === 0;
-            const td = document.createElement(isHeader ? 'th' : 'td');
+            const isRowHeader = block.settings.firstColumnHeaders && colIndex === 0 && (!block.settings.headerRow || rowIndex > 0);
+            const td = document.createElement(isHeader || isRowHeader ? 'th' : 'td');
             const cellInner = document.createElement('div');
-            cellInner.className = cell.type === 'patient' ? 'table-cell-patient' : 'table-cell-static';
+            cellInner.className = `${cell.type === 'patient' ? 'table-cell-patient' : 'table-cell-static'} ${isRowHeader ? 'table-row-heading-cell' : ''}`;
             cellInner.textContent = cell.text || (cell.type === 'patient' ? 'Patienten fyller i här' : 'Tom statisk cell');
             if (!isReadOnly) {
               td.addEventListener('dblclick', () => {
@@ -771,14 +863,24 @@ function initMaterialBuilder() {
         break;
       }
       case 'textfield': {
-        wrap.innerHTML = `<div class="block-title">${escapeHtml(block.settings.label || 'Textfält')}</div>`;
-        const field = document.createElement('textarea');
-        field.className = 'assignment-textarea';
-        field.maxLength = block.settings.maxChars || 2000;
-        field.placeholder = 'Skriv ditt svar här...';
-        field.value = answers[answerKey]?.text || '';
-        field.addEventListener('input', e => updateAssignmentAnswer(assignment.id, answerKey, { text: e.target.value }));
-        wrap.appendChild(field);
+        ensureTextFieldSettings(block);
+        wrap.innerHTML = `<div class="block-title">${escapeHtml(block.settings.title || 'Textfält')}</div>`;
+        const list = document.createElement('div');
+        list.className = 'assignment-text-field-list';
+        block.settings.fields.forEach((fieldItem, fieldIndex) => {
+          const fieldWrap = document.createElement('label');
+          fieldWrap.className = 'assignment-text-field';
+          fieldWrap.innerHTML = `<span class="assignment-field-title">${escapeHtml(fieldItem.title || `Fritext ${fieldIndex + 1}`)}</span>${fieldItem.prompt ? `<span class="assignment-field-help">${escapeHtml(fieldItem.prompt)}</span>` : ''}`;
+          const field = document.createElement('textarea');
+          field.className = 'assignment-textarea';
+          field.maxLength = block.settings.maxChars || 2000;
+          field.placeholder = 'Skriv ditt svar här...';
+          field.value = answers[answerKey]?.[`field_${fieldIndex}`] || '';
+          field.addEventListener('input', e => updateAssignmentAnswer(assignment.id, answerKey, { [`field_${fieldIndex}`]: e.target.value }));
+          fieldWrap.appendChild(field);
+          list.appendChild(fieldWrap);
+        });
+        wrap.appendChild(list);
         break;
       }
       case 'rating': {
@@ -832,8 +934,9 @@ function initMaterialBuilder() {
           const tr = document.createElement('tr');
           row.forEach((cell, colIndex) => {
             const isHeader = block.settings.headerRow && rowIndex === 0;
-            const td = document.createElement(isHeader ? 'th' : 'td');
-            if (cell.type === 'patient' && !isHeader) {
+            const isRowHeader = block.settings.firstColumnHeaders && colIndex === 0 && (!block.settings.headerRow || rowIndex > 0);
+            const td = document.createElement(isHeader || isRowHeader ? 'th' : 'td');
+            if (cell.type === 'patient' && !isHeader && !isRowHeader) {
               const input = document.createElement('textarea');
               input.className = 'assignment-table-input';
               input.placeholder = 'Skriv här';
@@ -841,7 +944,7 @@ function initMaterialBuilder() {
               input.addEventListener('input', e => updateAssignmentAnswer(assignment.id, answerKey, { [`cell_${rowIndex}_${colIndex}`]: e.target.value }));
               td.appendChild(input);
             } else {
-              td.textContent = cell.text || 'Tom statisk cell';
+              td.textContent = cell.text || (isRowHeader ? `Radrubrik ${rowIndex}` : 'Tom statisk cell');
             }
             tr.appendChild(td);
           });
@@ -946,20 +1049,24 @@ function initMaterialBuilder() {
     return card;
   }
 
-  function createTextInput(label, value, onChange, fieldName = '', compact = false) {
+  function createTextInput(label, value, onChange, fieldName = '', compact = false, clearOnFocusValue = '') {
     const group = document.createElement('div');
     group.className = 'field-group';
     group.innerHTML = `<label class="field-label">${label}</label><input type="text" class="form-control" data-setting-name="${escapeAttribute(fieldName)}" value="${escapeAttribute(value || '')}"/>`;
-    group.querySelector('input').addEventListener('input', event => onChange(event.target.value));
+    const input = group.querySelector('input');
+    maybeBindExampleClear(input, clearOnFocusValue);
+    input.addEventListener('input', event => onChange(event.target.value));
     if (compact) group.style.marginBottom = '6px';
     return group;
   }
 
-  function createTextarea(label, value, onChange, fieldName = '') {
+  function createTextarea(label, value, onChange, fieldName = '', options = {}) {
     const group = document.createElement('div');
     group.className = 'field-group';
     group.innerHTML = `<label class="field-label">${label}</label><textarea data-setting-name="${escapeAttribute(fieldName)}">${escapeHtml(value || '')}</textarea>`;
-    group.querySelector('textarea').addEventListener('input', event => onChange(event.target.value));
+    const textarea = group.querySelector('textarea');
+    maybeBindExampleClear(textarea, options.clearOnFocusValue || '');
+    textarea.addEventListener('input', event => onChange(event.target.value));
     return group;
   }
 
@@ -1031,7 +1138,12 @@ function initMaterialBuilder() {
     return Array.from({ length: rows }, (_, rowIndex) => Array.from({ length: cols }, (_, colIndex) => {
       const fromExisting = existing[rowIndex]?.[colIndex];
       if (fromExisting) return { ...fromExisting };
-      return { type: rowIndex === 0 ? 'static' : 'patient', text: rowIndex === 0 ? `Rubrik ${colIndex + 1}` : '' };
+      const isHeaderRow = rowIndex === 0;
+      const isFirstColumn = colIndex === 0;
+      return {
+        type: isHeaderRow || isFirstColumn ? 'static' : 'patient',
+        text: getDefaultTableCellText(rowIndex, colIndex)
+      };
     }));
   }
 
@@ -1043,7 +1155,7 @@ function initMaterialBuilder() {
 
   function getBlockTitle(block) {
     if (block.type === 'info') return block.settings.title || 'Informationstext';
-    if (block.type === 'textfield') return block.settings.label || 'Textfält';
+    if (block.type === 'textfield') return block.settings.title || 'Textfält';
     if (block.type === 'rating') return block.settings.label || 'Skattningsbox';
     if (block.type === 'table') return `${block.settings.rows} × ${block.settings.cols} tabell`;
     if (block.type === 'emoji') return block.settings.label || 'Emoji-skala';
@@ -1052,9 +1164,14 @@ function initMaterialBuilder() {
 
   function getBlockSummary(block) {
     if (block.type === 'info') return 'Statisk text och instruktioner';
-    if (block.type === 'textfield') return `Max ${block.settings.maxChars} tecken`;
+    if (block.type === 'textfield') {
+      ensureTextFieldSettings(block);
+      const firstField = block.settings.fields[0];
+      const suffix = firstField?.prompt ? ` · ${compactText(firstField.prompt, 24)}` : '';
+      return `${block.settings.fields.length} fritextfält · max ${block.settings.maxChars} tecken${suffix}`;
+    }
     if (block.type === 'rating') return `${block.settings.scale} · ${block.settings.ratingType === 'slider' ? 'dragbar mätare' : 'klickbar skala'}`;
-    if (block.type === 'table') return `${block.settings.rows} rader · ${block.settings.cols} kolumner`;
+    if (block.type === 'table') return `${block.settings.rows} rader · ${block.settings.cols} kolumner${block.settings.firstColumnHeaders ? ' · radrubriker aktiva' : ''}`;
     if (block.type === 'emoji') return `Förvalt läge: ${block.settings.defaultValue}/6`;
     return '';
   }
@@ -1107,5 +1224,50 @@ function initMaterialBuilder() {
 
   function escapeAttribute(value) {
     return escapeHtml(value).replaceAll('`', '&#96;');
+  }
+
+  function createTextFieldItem(title, prompt) {
+    return {
+      title,
+      prompt,
+      defaultTitle: title,
+      defaultPrompt: prompt
+    };
+  }
+
+  function ensureTextFieldSettings(block) {
+    if (!block.settings.fields?.length) {
+      const legacyLabel = block.settings.label || 'Reflektion';
+      block.settings.fields = [createTextFieldItem(legacyLabel, 'Skriv några meningar här.')];
+    }
+    if (!block.settings.title) block.settings.title = block.settings.label || 'Textfält';
+    block.settings.fields = block.settings.fields.map(field => ({
+      ...field,
+      defaultTitle: field.defaultTitle || field.title || 'Fritext',
+      defaultPrompt: field.defaultPrompt || field.prompt || 'Skriv några meningar här.'
+    }));
+  }
+
+  function maybeBindExampleClear(field, clearOnFocusValue) {
+    if (!field || !clearOnFocusValue) return;
+    field.addEventListener('focus', () => {
+      if (field.dataset.exampleCleared === 'true') return;
+      if (field.value === clearOnFocusValue) {
+        field.value = '';
+        field.dataset.exampleCleared = 'true';
+      }
+    }, { once: false });
+  }
+
+  function compactText(value, maxLength) {
+    const clean = String(value || '').replace(/\s+/g, ' ').trim();
+    if (!clean) return '';
+    return clean.length <= maxLength ? clean : `${clean.slice(0, Math.max(0, maxLength - 1))}…`;
+  }
+
+  function getDefaultTableCellText(rowIndex, colIndex) {
+    if (rowIndex === 0) return `Kolumnrubrik ${colIndex + 1}`;
+    if (colIndex === 0) return `Radrubrik ${rowIndex}`;
+    return '';
   }
 }

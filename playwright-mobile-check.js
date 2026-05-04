@@ -12,7 +12,7 @@ const { chromium } = require('playwright');
     hasTouch: true
   });
 
-  await page.goto('http://127.0.0.1:8789/', { waitUntil: 'networkidle' });
+  await page.goto('http://127.0.0.1:4173/index.html', { waitUntil: 'networkidle' });
   await page.screenshot({ path: 'ux-mobile-login.png', fullPage: true });
 
   await page.getByRole('link', { name: /terapeutvyn/i }).click();

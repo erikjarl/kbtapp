@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
     console.log(`[${type}] ${message}`);
   }
 
-  await page.goto('http://127.0.0.1:8789/', { waitUntil: 'networkidle' });
+  await page.goto('http://127.0.0.1:4173/index.html', { waitUntil: 'networkidle' });
 
   await page.screenshot({ path: 'ux-login.png', fullPage: true });
   note('info', 'Loaded login/role landing page and captured screenshot ux-login.png');

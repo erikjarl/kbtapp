@@ -217,6 +217,7 @@ När arbete fortsätter via DM med Nils:
    - tydligare blockredigering
    - bättre styling och informationshierarki
 4. Om drag/drop ska återintroduceras senare bör det i så fall ske som en helt annan teknisk lösning, inte bara ytterligare små justeringar på tidigare native DnD-spår
+5. **Efter varje större frontendändring ska projektet alltid utvärderas praktiskt i webbläsare med Playwright** (minst mobil + desktop när relevant), och agenten ska därefter göra minst **1 och högst 2 egna förbättringsvarv** om resultatet inte ser tillräckligt bra ut innan arbetet lämnas tillbaka
 5. Tänk redan nu på framtida konvertering till iPhone- och Android-app när nya UI-flöden och komponenter byggs
 
 ---
