@@ -24,23 +24,34 @@
         </svg>
         <span class="login-brand">KBTApp</span>
       </div>
-      <p class="login-sub">Välj vilken vy du vill öppna för testkörning</p>
+      <span class="login-kicker">Första klickbara utkastet</span>
+      <h1 class="login-title">Ett lugnare sätt att dela KBT-material mellan terapeut och patient.</h1>
+      <p class="login-sub">Bygg hemuppgifter, dela psykoedukation och följ patientens arbete i ett sammanhållet flöde. Öppna den vy du vill testköra.</p>
+      <div class="login-highlights">
+        <div class="highlight-pill">Skapa material block för block</div>
+        <div class="highlight-pill">Förhandsvisa patientläget direkt</div>
+        <div class="highlight-pill">Spara mallar och återanvänd</div>
+      </div>
       <div class="entry-grid">
         <a href="#therapist" class="login-role primary" data-role="therapist">
           <span class="role-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </span>
-          <span class="role-copy"><strong>Terapeutvy</strong><small>Dashboard, patientmeddelanden, arbetsyta, materialbibliotek och mallbibliotek.</small></span>
+          <span class="role-copy"><strong>Öppna terapeutvyn</strong><small>Dashboard, patientmeddelanden, arbetsyta, materialbibliotek och mallbibliotek.</small></span>
+          <span class="role-arrow">→</span>
         </a>
         <a href="#client" class="login-role" data-role="client">
           <span class="role-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6l3 3 3-3V2"/><path d="M4 11a8 8 0 1 0 16 0"/><path d="M12 19v4"/></svg>
           </span>
-          <span class="role-copy"><strong>Patientvy</strong><small>Dashboard, hemuppgifter, material och kontakt med behandlare.</small></span>
+          <span class="role-copy"><strong>Öppna patientvyn</strong><small>Dashboard, hemuppgifter, material och trygg kontakt med behandlare.</small></span>
+          <span class="role-arrow">→</span>
         </a>
       </div>
-      <p class="login-note">Detta är frontend-demovyer. Inga riktiga användarkonton eller patientdata används ännu.</p>
-      <p class="login-updated">Uppdaterades: 2026-05-04 14:02 CEST</p>
+      <div class="login-footnote">
+        <p class="login-note">Detta är frontend-demovyer. Inga riktiga användarkonton eller patientdata används ännu.</p>
+        <p class="login-updated">Uppdaterades: 2026-05-04 18:58 CEST</p>
+      </div>
     </div>
   </section>
 
@@ -72,18 +83,56 @@
 
     <main class="app-main" id="therapist-main">
       <section data-page="dashboard" class="page active">
-        <div class="page-header">
-          <div>
-            <h1>Terapeutdashboard</h1>
-            <p class="sub">Frontendskiss för flera patienter, flera meddelandetrådar och kommande backendkopplingar.</p>
+        <div class="page-header dashboard-hero therapist-hero">
+          <div class="hero-copy">
+            <span class="section-kicker">Terapeutöversikt</span>
+            <h1>Håll ihop behandling, uppgifter och uppföljning i ett arbetsflöde.</h1>
+            <p class="sub">Frontendskiss för flera patienter, flera meddelandetrådar och ett tydligare nav kring att skapa patientmaterial.</p>
+            <div class="hero-actions">
+              <button class="builder-action accent" type="button" data-quick-nav="create">Skapa nytt patientmaterial</button>
+              <button class="builder-action" type="button" data-quick-nav="messages">Öppna patientmeddelanden</button>
+            </div>
           </div>
-          <p class="page-date" id="therapist-date"></p>
+          <div class="hero-side card soft-panel">
+            <span class="section-kicker">I fokus idag</span>
+            <h3>Maja Svensson behöver återkoppling</h3>
+            <p>Veckans exponering är inskickad, ett meddelande väntar och nästa session är bokad idag 14.00.</p>
+            <div class="mini-timeline">
+              <div><strong>13.15</strong><span>Se inlämnad hemuppgift</span></div>
+              <div><strong>13.30</strong><span>Skicka kort återkoppling</span></div>
+              <div><strong>14.00</strong><span>Behandlingssamtal</span></div>
+            </div>
+          </div>
         </div>
         <div class="dashboard-grid">
           <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="card-stat">3</div><div class="card-label">Nya händelser</div></div>
           <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="card-stat">7</div><div class="card-label">Olästa meddelanden</div></div>
           <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="card-stat">12</div><div class="card-label">Aktiva patienter</div></div>
           <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="card-stat">2</div><div class="card-label">Bokade tider idag</div></div>
+        </div>
+        <div class="care-flow-grid mt-lg">
+          <div class="card care-flow-card">
+            <div class="care-flow-header">
+              <div>
+                <span class="section-kicker">Dagens arbetsflöde</span>
+                <h3>Från ny aktivitet till färdig uppföljning</h3>
+              </div>
+            </div>
+            <div class="care-flow-steps">
+              <div class="flow-step active"><span>1</span><div><strong>Fånga upp nytt</strong><small>Händelser, meddelanden och inskick syns direkt.</small></div></div>
+              <div class="flow-step"><span>2</span><div><strong>Skapa eller återanvänd material</strong><small>Bygg från block eller utgå från mall.</small></div></div>
+              <div class="flow-step"><span>3</span><div><strong>Tilldela patient</strong><small>Skicka hemuppgift och följ svar i samma gränssnitt.</small></div></div>
+            </div>
+          </div>
+          <div class="card patient-spotlight-card">
+            <span class="section-kicker">Patientöversikt</span>
+            <h3>Tre patienter att prioritera</h3>
+            <div class="patient-spotlight-list">
+              <div class="spotlight-row"><strong>Maja Svensson</strong><small>Inskick väntar · hög prioritet</small></div>
+              <div class="spotlight-row"><strong>Erik Johansson</strong><small>Oläst fråga om sömnregistrering</small></div>
+              <div class="spotlight-row"><strong>Linda Berg</strong><small>Nytt mål tillagt inför torsdag</small></div>
+            </div>
+          </div>
         </div>
         <div class="row mt-lg">
           <div class="card card-list">
@@ -131,8 +180,21 @@
       <section data-page="create" class="page">
         <div class="page-header">
           <div>
+            <span class="section-kicker">Arbetsyta</span>
             <h1>Skapa patientmaterial</h1>
             <p class="sub">Bygg interaktiva hemuppgifter, formulär och psykoedukation direkt i arbetsytan.</p>
+          </div>
+        </div>
+        <div class="builder-intro card">
+          <div>
+            <span class="section-kicker">Rekommenderat arbetssätt</span>
+            <h3>Gör ett första utkast, förhandsvisa, spara och tilldela.</h3>
+          </div>
+          <div class="builder-intro-steps">
+            <div><strong>1</strong><span>Lägg till block</span></div>
+            <div><strong>2</strong><span>Finjustera innehåll</span></div>
+            <div><strong>3</strong><span>Öppna patientversion</span></div>
+            <div><strong>4</strong><span>Spara eller tilldela</span></div>
           </div>
         </div>
         <div class="workspace-tabs">
@@ -253,7 +315,7 @@
       </section>
 
       <section data-page="library" class="page">
-        <div class="page-header"><div><h1>Mitt materialbibliotek</h1><p class="sub">Eget bibliotek för sparade hemuppgifter och psykoedukation, redo för filter och versionshantering.</p></div></div>
+        <div class="page-header library-page-head"><div><span class="section-kicker">Återanvänd</span><h1>Mitt materialbibliotek</h1><p class="sub">Eget bibliotek för sparade hemuppgifter och psykoedukation, redo för filter och versionshantering.</p></div><div class="library-summary card soft-panel"><strong>7 sparade objekt</strong><small>Material med tydlig typ, status och senaste uppdatering.</small></div></div>
         <div class="library-grid" id="library-grid">
           <div class="card"><h3>Sömnregistrering</h3><p>Typ: Hemuppgift · status: aktiv mall</p></div>
           <div class="card"><h3>Beteendeaktivering – vecka 1</h3><p>Typ: Hemuppgift · status: sparad version</p></div>
@@ -262,7 +324,7 @@
       </section>
 
       <section data-page="templates" class="page">
-        <div class="page-header"><div><h1>Mallbibliotek</h1><p class="sub">Förvalda mallar som senare ska kunna importeras till arbetsytan och modifieras per patient.</p></div></div>
+        <div class="page-header library-page-head"><div><span class="section-kicker">Starta snabbare</span><h1>Mallbibliotek</h1><p class="sub">Förvalda mallar som senare ska kunna importeras till arbetsytan och modifieras per patient.</p></div><div class="library-summary card soft-panel"><strong>3 rekommenderade mallar</strong><small>Tänkta som tydliga utgångspunkter, inte låsta formulär.</small></div></div>
         <div class="library-grid" id="template-grid">
           <div class="card"><h3>Tankefälla – registrering</h3><p>Importera till arbetsytan och skapa patientversion.</p></div>
           <div class="card"><h3>Exponering – planeringsblad</h3><p>Bas för gradvis exponering med anpassningsbara steg.</p></div>
@@ -307,12 +369,26 @@
 
     <main class="app-main" id="client-main">
       <section data-page="dashboard" class="page active">
-        <div class="page-header">
-          <div>
-            <h1>Klientdashboard</h1>
-            <p class="sub">Skiss över en personlig översikt för patientanvändare med kommande inloggad användarkoppling.</p>
+        <div class="page-header dashboard-hero patient-hero">
+          <div class="hero-copy">
+            <span class="section-kicker">Patientöversikt</span>
+            <h1>Se vad som väntar, vad som är gjort och hur du går vidare.</h1>
+            <p class="sub">Skiss över en personlig översikt för patientanvändare med fokus på tydlighet, lugn och nästa steg.</p>
+            <div class="hero-actions">
+              <button class="builder-action accent" type="button" data-quick-nav="assignments">Öppna hemuppgifter</button>
+              <button class="builder-action" type="button" data-quick-nav="contact">Kontakta behandlare</button>
+            </div>
           </div>
-          <p class="page-date" id="client-date"></p>
+          <div class="hero-side card soft-panel">
+            <span class="section-kicker">Nästa steg</span>
+            <h3>Fortsätt med exponeringstrappan</h3>
+            <p>Du har en påbörjad hemuppgift och ett nytt meddelande från din behandlare. Det viktigaste är tydligt prioriterat överst.</p>
+            <div class="mini-timeline">
+              <div><strong>Idag</strong><span>Fyll i vecka 2</span></div>
+              <div><strong>Torsdag</strong><span>Session 14.00</span></div>
+              <div><strong>Efteråt</strong><span>Skicka in reflektion</span></div>
+            </div>
+          </div>
         </div>
         <div class="dashboard-grid">
           <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="card-stat">2</div><div class="card-label">Nya händelser</div></div>
@@ -340,12 +416,12 @@
       </section>
 
       <section data-page="assignments" class="page">
-        <div class="page-header"><div><h1>Mina hemuppgifter</h1><p class="sub">Här visas material som terapeuten tilldelat patienten och som kan skickas in tillbaka till terapeutvyn.</p></div></div>
+        <div class="page-header"><div><span class="section-kicker">Att göra</span><h1>Mina hemuppgifter</h1><p class="sub">Här visas material som terapeuten tilldelat patienten och som kan skickas in tillbaka till terapeutvyn.</p></div></div>
         <div class="assignment-grid" id="client-assignments-grid"></div>
       </section>
 
       <section data-page="materials" class="page">
-        <div class="page-header"><div><h1>Mitt material</h1><p class="sub">Psykoedukation, övningar och resurser som terapeuten delat med just denna patient.</p></div></div>
+        <div class="page-header"><div><span class="section-kicker">Resurser</span><h1>Mitt material</h1><p class="sub">Psykoedukation, övningar och resurser som terapeuten delat med just denna patient.</p></div></div>
         <div class="library-grid" id="client-materials-grid"></div>
       </section>
 

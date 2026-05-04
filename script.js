@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
       main.querySelectorAll('.page').forEach(page => {
         page.classList.toggle('active', page.dataset.page === pageId);
       });
+      main.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     sideNav.querySelectorAll('.nav-item[data-page]').forEach(item => {
@@ -69,6 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
     }
+
+    viewElement.querySelectorAll('[data-quick-nav]').forEach(button => {
+      button.addEventListener('click', () => switchPage(button.dataset.quickNav));
+    });
   }
 
   setupNav(therapistView);
@@ -626,6 +631,7 @@ function initMaterialBuilder() {
 
   function openPreview() {
     els.previewShell.innerHTML = '';
+    els.previewShell.classList.add('device-preview');
     if (!state.blocks.length) {
       els.previewShell.innerHTML = '<div class="preview-block"><h4>Tom arbetsyta</h4><p>Lägg till minst ett block för att kunna förhandsvisa materialet.</p></div>';
     } else {
@@ -712,13 +718,13 @@ function initMaterialBuilder() {
     if (!els.clientAssignmentsGrid) return;
     els.clientAssignmentsGrid.innerHTML = '';
     if (!assigned.length) {
-      els.clientAssignmentsGrid.innerHTML = '<div class="card"><h3>Inga tilldelade hemuppgifter ännu</h3><p>När terapeuten skickar material till Maja Svensson visas det här.</p></div>';
+      els.clientAssignmentsGrid.innerHTML = '<div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Tom vy</span><h3>Inga tilldelade hemuppgifter ännu</h3></div></div><p>När terapeuten skickar material till Maja Svensson visas det här med tydlig status, öppna-knapp och möjlighet att skicka in svar.</p><div class="library-card-meta"><span>Lugn översikt</span><span>Tydliga nästa steg</span></div></div>';
       return;
     }
     assigned.forEach(item => {
       const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `<h3>${escapeHtml(item.title)}</h3><p>Status: ${escapeHtml(item.status)}</p><p>${item.blocks.length} block · tilldelad ${escapeHtml(item.createdAt)}</p><div class="builder-toolbar"><button class="builder-action" type="button">Öppna formulär</button><button class="builder-action accent" type="button">Skicka in till terapeut</button></div>`;
+      card.className = 'card library-card';
+      card.innerHTML = `<div class="library-card-head"><div><span class="library-card-type">Hemuppgift</span><h3>${escapeHtml(item.title)}</h3></div></div><p>Status: ${escapeHtml(item.status)} · tilldelad ${escapeHtml(item.createdAt)}</p><div class="library-card-meta"><span>${item.blocks.length} block</span><span>${escapeHtml(item.patientName)}</span></div><div class="builder-toolbar"><button class="builder-action" type="button">Öppna formulär</button><button class="builder-action accent" type="button">Skicka in till terapeut</button></div>`;
       const [openBtn, submitBtn] = card.querySelectorAll('button');
       openBtn.addEventListener('click', () => openAssignment(item.id));
       submitBtn.addEventListener('click', () => submitAssignment(item.id));
@@ -736,7 +742,7 @@ function initMaterialBuilder() {
 
     const stage = document.createElement('section');
     stage.className = 'assignment-stage';
-    stage.innerHTML = `<div><h4>${escapeHtml(item.title)}</h4><p>Fyll i formuläret nedan som patient. Detta är ett fönster i fönstret för att ge mer plats åt själva genomförandet.</p></div>`;
+    stage.innerHTML = `<div><span class="section-kicker">Patientläge</span><h4>${escapeHtml(item.title)}</h4><p>Fyll i formuläret nedan som patient. Detta läge är gjort för att kännas lugnare, mer fokuserat och tydligt steg för steg.</p></div><div class="assignment-summary"><div><strong>Status</strong><span>${escapeHtml(item.status)}</span></div><div><strong>Patient</strong><span>${escapeHtml(item.patientName)}</span></div><div><strong>Block</strong><span>${item.blocks.length} st</span></div></div>`;
     els.assignmentShell.appendChild(stage);
 
     item.blocks.forEach((block, index) => {
@@ -916,7 +922,7 @@ function initMaterialBuilder() {
     const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
     els.therapistSubmissionsGrid.innerHTML = '';
     if (!submissions.length) {
-      els.therapistSubmissionsGrid.innerHTML = '<div class="card"><h3>Inga inskick ännu</h3><p>När patienten skickar in material visas det här.</p></div>';
+      els.therapistSubmissionsGrid.innerHTML = '<div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Väntar</span><h3>Inga inskick ännu</h3></div></div><p>När patienten skickar in material visas det här i en tydlig lista för snabb uppföljning.</p><div class="library-card-meta"><span>Redo för uppföljning</span><span>Visas i terapeutvyn</span></div></div>';
       return;
     }
     submissions.forEach(item => {
@@ -934,8 +940,9 @@ function initMaterialBuilder() {
 
   function createLibraryCard(title, description) {
     const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `<h3>${escapeHtml(title)}</h3><p>${escapeHtml(description)}</p>`;
+    const type = /mall/i.test(title + ' ' + description) ? 'Mall' : /psykoedukation|artikel|material/i.test(description) ? 'Material' : 'Hemuppgift';
+    card.className = 'card library-card';
+    card.innerHTML = `<div class="library-card-head"><div><span class="library-card-type">${escapeHtml(type)}</span><h3>${escapeHtml(title)}</h3></div></div><p>${escapeHtml(description)}</p><div class="library-card-meta"><span>Klar att använda</span><span>Mobilvänlig vy</span></div><div class="library-card-actions"><button class="builder-action" type="button">Öppna</button><button class="builder-action" type="button">Duplicera</button></div>`;
     return card;
   }
 
