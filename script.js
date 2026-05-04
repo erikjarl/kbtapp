@@ -89,7 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
 function initMaterialBuilder() {
   const STORAGE_KEYS = {
     templates: 'kbtapp_templates',
-    library: 'kbtapp_material_library'
+    library: 'kbtapp_material_library',
+    assigned: 'kbtapp_assigned_materials',
+    submissions: 'kbtapp_material_submissions'
   };
 
   const patients = [
@@ -116,7 +118,8 @@ function initMaterialBuilder() {
     blocks: [],
     selectedBlockId: null,
     suppressLibraryClickUntil: 0,
-    assignedPatientId: patients[0].id
+    assignedPatientId: patients[0].id,
+    activeClientPatientId: patients[0].id
   };
 
   const collapsedTypes = new Set(['rating', 'textfield', 'table', 'emoji', 'info']);
@@ -136,6 +139,9 @@ function initMaterialBuilder() {
     patientSelect: document.getElementById('patient-select'),
     libraryGrid: document.getElementById('library-grid'),
     templateGrid: document.getElementById('template-grid'),
+    clientAssignmentsGrid: document.getElementById('client-assignments-grid'),
+    clientMaterialsGrid: document.getElementById('client-materials-grid'),
+    therapistSubmissionsGrid: document.getElementById('therapist-submissions-grid'),
     toastArea: document.getElementById('toast-area')
   };
 
@@ -143,6 +149,11 @@ function initMaterialBuilder() {
     { title: 'Sömnregistrering', description: 'Typ: Hemuppgift · status: aktiv mall' },
     { title: 'Beteendeaktivering – vecka 1', description: 'Typ: Hemuppgift · status: sparad version' },
     { title: 'Psykoedukation om oro', description: 'Typ: Material · status: publicerbar' }
+  ];
+  const clientMaterialSeed = [
+    { title: 'Vad är oro?', description: 'Psykoedukation · läst 80%' },
+    { title: 'Sömn och återhämtning', description: 'Artikel · sparad' },
+    { title: 'Andningsövning', description: 'Övning · redo att öppnas' }
   ];
   const templateSeed = [
     { title: 'Tankefälla – registrering', description: 'Importera till arbetsytan och skapa patientversion.' },
@@ -636,8 +647,23 @@ function initMaterialBuilder() {
 
   function assignPatient() {
     state.assignedPatientId = els.patientSelect.value;
+    state.activeClientPatientId = state.assignedPatientId;
     const patient = patients.find(item => item.id === state.assignedPatientId);
-    showToast('Material tilldelat', `${patient.name} (${patient.id}) är vald som mottagare.`);
+    const title = getMaterialTitle();
+    const assignedEntry = {
+      id: `assigned_${Date.now()}`,
+      patientId: patient.id,
+      patientName: patient.name,
+      title,
+      createdAt: new Date().toLocaleString('sv-SE'),
+      status: 'tilldelad',
+      blocks: structuredClone(state.blocks)
+    };
+    const current = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+    current.unshift(assignedEntry);
+    localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(current));
+    renderSavedCollections();
+    showToast('Material tilldelat', `${title} skickades till ${patient.name}.`);
     closeModal(els.assignModal);
   }
 
@@ -666,6 +692,70 @@ function initMaterialBuilder() {
   function renderSavedCollections() {
     renderCollectionGrid(els.libraryGrid, materialSeed, JSON.parse(localStorage.getItem(STORAGE_KEYS.library) || '[]'));
     renderCollectionGrid(els.templateGrid, templateSeed, JSON.parse(localStorage.getItem(STORAGE_KEYS.templates) || '[]'));
+    renderClientAssignments();
+    renderClientMaterials();
+    renderTherapistSubmissions();
+  }
+
+  function renderClientAssignments() {
+    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]').filter(item => item.patientId === state.activeClientPatientId);
+    if (!els.clientAssignmentsGrid) return;
+    els.clientAssignmentsGrid.innerHTML = '';
+    if (!assigned.length) {
+      els.clientAssignmentsGrid.innerHTML = '<div class="card"><h3>Inga tilldelade hemuppgifter ännu</h3><p>När terapeuten skickar material till Maja Svensson visas det här.</p></div>';
+      return;
+    }
+    assigned.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `<h3>${escapeHtml(item.title)}</h3><p>Status: ${escapeHtml(item.status)}</p><p>${item.blocks.length} block · tilldelad ${escapeHtml(item.createdAt)}</p><button class="builder-action accent" type="button">Skicka in till terapeut</button>`;
+      card.querySelector('button').addEventListener('click', () => submitAssignment(item.id));
+      els.clientAssignmentsGrid.appendChild(card);
+    });
+  }
+
+  function renderClientMaterials() {
+    if (!els.clientMaterialsGrid) return;
+    els.clientMaterialsGrid.innerHTML = '';
+    clientMaterialSeed.forEach(item => els.clientMaterialsGrid.appendChild(createLibraryCard(item.title, item.description)));
+    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]').filter(item => item.patientId === state.activeClientPatientId);
+    assigned.forEach(item => {
+      els.clientMaterialsGrid.appendChild(createLibraryCard(item.title, `${item.patientName} · ${item.blocks.length} block · status ${item.status}`));
+    });
+  }
+
+  function submitAssignment(assignmentId) {
+    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+    const item = assigned.find(entry => entry.id === assignmentId);
+    if (!item) return;
+    item.status = 'inskickad';
+    localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
+    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    submissions.unshift({
+      id: `submission_${Date.now()}`,
+      assignmentId: item.id,
+      patientId: item.patientId,
+      patientName: item.patientName,
+      title: item.title,
+      submittedAt: new Date().toLocaleString('sv-SE'),
+      blocks: item.blocks
+    });
+    localStorage.setItem(STORAGE_KEYS.submissions, JSON.stringify(submissions));
+    renderSavedCollections();
+    showToast('Inskickat', `${item.title} skickades in av ${item.patientName}.`);
+  }
+
+  function renderTherapistSubmissions() {
+    if (!els.therapistSubmissionsGrid) return;
+    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    els.therapistSubmissionsGrid.innerHTML = '';
+    if (!submissions.length) {
+      els.therapistSubmissionsGrid.innerHTML = '<div class="card"><h3>Inga inskick ännu</h3><p>När patienten skickar in material visas det här.</p></div>';
+      return;
+    }
+    submissions.forEach(item => {
+      els.therapistSubmissionsGrid.appendChild(createLibraryCard(item.title, `${item.patientName} · inskickad ${item.submittedAt} · ${item.blocks.length} block`));
+    });
   }
 
   function renderCollectionGrid(target, seed, savedItems) {

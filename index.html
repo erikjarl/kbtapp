@@ -40,7 +40,7 @@
         </a>
       </div>
       <p class="login-note">Detta är frontend-demovyer. Inga riktiga användarkonton eller patientdata används ännu.</p>
-      <p class="login-updated">Uppdaterades: 2026-05-03 21:20 CEST</p>
+      <p class="login-updated">Uppdaterades: 2026-05-04 12:55 CEST</p>
     </div>
   </section>
 
@@ -121,6 +121,10 @@
             <div class="chat-bubble outgoing">Tack, jag ser den. Vi går igenom sista delen tillsammans i nästa session.</div>
             <div class="composer-placeholder">Här kommer senare ett säkert meddelandefält kopplat till patient_id och thread_id.</div>
           </div>
+        </div>
+        <div class="card mt-lg">
+          <div class="page-header compact-header"><div><h3>Inskickat patientmaterial</h3><p class="sub">När patienten skickar in ett material visas det här i terapeutvyn.</p></div></div>
+          <div class="assignment-grid" id="therapist-submissions-grid"></div>
         </div>
       </section>
 
@@ -336,20 +340,13 @@
       </section>
 
       <section data-page="assignments" class="page">
-        <div class="page-header"><div><h1>Mina hemuppgifter</h1><p class="sub">Framtida lista över utskickade uppgifter med status, deadlines och ifyllbara svar.</p></div></div>
-        <div class="assignment-grid">
-          <div class="card"><h3>Veckoregistrering</h3><p>Status: pågående</p><p>Svarsfält, checkrutor och inskickning kopplas här senare.</p></div>
-          <div class="card"><h3>Exponering – steg 1</h3><p>Status: ej påbörjad</p><p>Kommer få interaktiva formulärblock och möjlighet att spara utkast.</p></div>
-        </div>
+        <div class="page-header"><div><h1>Mina hemuppgifter</h1><p class="sub">Här visas material som terapeuten tilldelat patienten och som kan skickas in tillbaka till terapeutvyn.</p></div></div>
+        <div class="assignment-grid" id="client-assignments-grid"></div>
       </section>
 
       <section data-page="materials" class="page">
         <div class="page-header"><div><h1>Mitt material</h1><p class="sub">Psykoedukation, övningar och resurser som terapeuten delat med just denna patient.</p></div></div>
-        <div class="library-grid">
-          <div class="card"><h3>Vad är oro?</h3><p>Psykoedukation · läst 80%</p></div>
-          <div class="card"><h3>Sömn och återhämtning</h3><p>Artikel · sparad</p></div>
-          <div class="card"><h3>Andningsövning</h3><p>Övning · redo att öppnas</p></div>
-        </div>
+        <div class="library-grid" id="client-materials-grid"></div>
       </section>
 
       <section data-page="contact" class="page">
