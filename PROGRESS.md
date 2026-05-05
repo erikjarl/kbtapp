@@ -192,3 +192,33 @@
 - Felsök varför åtgärdsknappen i terapeutens inskickskort ibland inte blir praktiskt klickbar/visuell i dashboard-vyn
 - När det sitter: kör ett rent end-to-end-varv där terapeuten öppnar inskick, skriver återkoppling och patienten läser den på både desktop och mobil
 - Därefter är ett rimligt nästa litet steg filtrering/sortering av inskick efter status eller en mer strukturerad återkopplingsvy
+
+## 2026-05-05 — Stabilare modalhantering runt terapeutens inskickskort
+
+### Vad jag arbetade med
+- En avgränsad del: robustheten runt modaler i terapeutflödet, särskilt förhandsvisning och granskning av inskick
+- Målet var att minska risken att en kvarliggande modal stör `Öppna inskick` eller annan navigation i samma session
+
+### Vad jag ändrade
+- Lade till central stängning av synliga modaler när användaren byter roll, loggar ut eller navigerar mellan sidor
+- Gjorde `openModal` defensiv så den först stänger andra öppna modaler innan en ny öppnas
+- Lade till `body.modal-open` för att låsa bakgrundsscrolling medan modal är öppen
+- Lade till Escape-stöd så öppna modaler kan stängas snabbare och mer förutsägbart
+- Behöll lösningen liten och lokal i befintlig frontend utan ny arkitektur eller backendspår
+
+### Vad som nu fungerar
+- Förhandsvisningsmodal och granskningsmodal kan inte längre ligga öppna ovanpå varandra i samma vy
+- Vybyte, logout och sidnavigering rensar nu öppna overlays innan nästa steg visas
+- Praktiskt verifierat med lokal Playwright-körning att de befintliga inskick/status-flödena fortfarande fungerar på:
+  - desktop 1440×900
+  - mobil 390×844
+- `script.js` passerar fortsatt `node --check`
+
+### Vad som inte fungerar
+- Browser-verktyget användes fortfarande inte i denna körning; praktisk testning gjordes med lokal Playwright eftersom tidigare browser-attach varit opålitlig för appen
+- Flödet är fortfarande helt lokalt/mockat i `localStorage` utan backend, autentisering eller synk mellan enheter
+- Jag reproducerade inte exakt samma nollstorleksbeteende på knappen denna körning, så fixen är främst en riktad robusthetsförbättring mot den mest sannolika störkällan: kvarliggande overlays
+
+### Nästa steg
+- Kör ett rent end-to-end-varv för terapeutåterkoppling där samma testrunda även öppnar/stänger fler modaler mellan stegen, för att bekräfta att flödet känns stabilt även under mer blandad användning
+- Därefter är ett bra nästa lilla steg att lägga till filtrering av inskick efter status i terapeutens lista, så uppföljning blir snabbare

@@ -11,7 +11,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const therapistView = document.getElementById('therapist-view');
   const clientView = document.getElementById('client-view');
 
+  function closeVisibleOverlays() {
+    document.querySelectorAll('.overlay-modal.open').forEach(modal => {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    });
+    document.body.classList.remove('modal-open');
+  }
+
   function openRole(role) {
+    closeVisibleOverlays();
     loginView.classList.remove('active');
     therapistView.classList.remove('active');
     clientView.classList.remove('active');
@@ -29,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.logout').forEach(item => {
     item.addEventListener('click', e => {
       e.preventDefault();
+      closeVisibleOverlays();
       therapistView.classList.remove('active');
       clientView.classList.remove('active');
       loginView.classList.add('active');
@@ -41,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const main = viewElement.querySelector('.app-main');
 
     function switchPage(pageId) {
+      closeVisibleOverlays();
       sideNav.querySelectorAll('.nav-item').forEach(item => {
         item.classList.toggle('active', item.dataset.page === pageId);
       });
@@ -251,6 +262,9 @@ function initMaterialBuilder() {
         if (type === 'assignment') closeModal(els.assignmentModal);
         if (type === 'submission') closeModal(els.submissionModal);
       });
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeAllModals();
     });
     els.submitAssignmentModal?.addEventListener('click', () => {
       if (state.activeAssignmentId) submitAssignment(state.activeAssignmentId);
@@ -1869,13 +1883,31 @@ function initMaterialBuilder() {
   }
 
   function openModal(element) {
+    if (!element) return;
+    closeAllModals(element);
     element.classList.add('open');
     element.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
   }
 
   function closeModal(element) {
+    if (!element) return;
     element.classList.remove('open');
     element.setAttribute('aria-hidden', 'true');
+    if (!document.querySelector('.overlay-modal.open')) {
+      document.body.classList.remove('modal-open');
+    }
+  }
+
+  function closeAllModals(exceptElement = null) {
+    document.querySelectorAll('.overlay-modal.open').forEach(modal => {
+      if (exceptElement && modal === exceptElement) return;
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    });
+    if (!exceptElement) {
+      document.body.classList.remove('modal-open');
+    }
   }
 
   function showToast(title, detail = '') {
