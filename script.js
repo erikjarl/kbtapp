@@ -96,7 +96,8 @@ function initMaterialBuilder() {
     templates: 'kbtapp_templates',
     library: 'kbtapp_material_library',
     assigned: 'kbtapp_assigned_materials',
-    submissions: 'kbtapp_material_submissions'
+    submissions: 'kbtapp_material_submissions',
+    messages: 'kbtapp_messages'
   };
 
   const patients = [
@@ -125,7 +126,8 @@ function initMaterialBuilder() {
     suppressLibraryClickUntil: 0,
     assignedPatientId: patients[0].id,
     activeClientPatientId: patients[0].id,
-    activeAssignmentId: null
+    activeAssignmentId: null,
+    activeTherapistThreadPatientId: patients[0].id
   };
 
   const collapsedTypes = new Set(['rating', 'textfield', 'table', 'emoji', 'info']);
@@ -152,8 +154,35 @@ function initMaterialBuilder() {
     assignmentShell: document.getElementById('assignment-shell'),
     assignmentModalTitle: document.getElementById('assignment-modal-title'),
     submitAssignmentModal: document.getElementById('submit-assignment-modal'),
-    toastArea: document.getElementById('toast-area')
+    toastArea: document.getElementById('toast-area'),
+    therapistThreadList: document.getElementById('therapist-thread-list'),
+    therapistMessageList: document.getElementById('therapist-message-list'),
+    therapistThreadTitle: document.getElementById('therapist-thread-title'),
+    therapistThreadSubtitle: document.getElementById('therapist-thread-subtitle'),
+    therapistThreadStatus: document.getElementById('therapist-thread-status'),
+    therapistMessageForm: document.getElementById('therapist-message-form'),
+    therapistMessageInput: document.getElementById('therapist-message-input'),
+    therapistQuickReplies: document.getElementById('therapist-quick-replies'),
+    clientMessageList: document.getElementById('client-message-list'),
+    clientThreadTitle: document.getElementById('client-thread-title'),
+    clientThreadSubtitle: document.getElementById('client-thread-subtitle'),
+    clientThreadStatus: document.getElementById('client-thread-status'),
+    clientMessageForm: document.getElementById('client-message-form'),
+    clientMessageInput: document.getElementById('client-message-input'),
+    clientQuickReplies: document.getElementById('client-quick-replies')
   };
+
+  const therapistQuickReplySeed = [
+    'Tack, jag ser detta och återkommer i lugn takt.',
+    'Bra att du hör av dig. Fortsätt där du är så följer vi upp nästa gång.',
+    'Det låter som ett rimligt nästa steg. Testa gärna en liten del först.'
+  ];
+
+  const clientQuickReplySeed = [
+    'Jag har gjort första delen av hemuppgiften.',
+    'Jag fastnade på en fråga och vill be om förtydligande.',
+    'Jag vill dela hur det gick efter övningen.'
+  ];
 
   const materialSeed = [
     { title: 'Sömnregistrering', description: 'Kvällsvanor, uppvaknanden och kort morgonreflektion för en lugn veckoöverblick.', meta: ['7–10 min', 'Aktiv mall'], type: 'Hemuppgift' },
@@ -174,6 +203,7 @@ function initMaterialBuilder() {
   bindPanelLibrary();
   bindToolbar();
   bindModals();
+  bindMessaging();
   renderSavedCollections();
   render();
 
@@ -218,6 +248,185 @@ function initMaterialBuilder() {
       if (state.activeAssignmentId) submitAssignment(state.activeAssignmentId);
       closeModal(els.assignmentModal);
     });
+  }
+
+  function bindMessaging() {
+    ensureMessageThreads();
+    bindQuickReplies(els.therapistQuickReplies, therapistQuickReplySeed, text => {
+      if (els.therapistMessageInput) els.therapistMessageInput.value = text;
+    });
+    bindQuickReplies(els.clientQuickReplies, clientQuickReplySeed, text => {
+      if (els.clientMessageInput) els.clientMessageInput.value = text;
+    });
+
+    els.therapistMessageForm?.addEventListener('submit', event => {
+      event.preventDefault();
+      sendMessage('therapist', state.activeTherapistThreadPatientId, els.therapistMessageInput?.value || '');
+      if (els.therapistMessageInput) els.therapistMessageInput.value = '';
+    });
+
+    els.clientMessageForm?.addEventListener('submit', event => {
+      event.preventDefault();
+      sendMessage('client', state.activeClientPatientId, els.clientMessageInput?.value || '');
+      if (els.clientMessageInput) els.clientMessageInput.value = '';
+    });
+
+    renderMessages();
+  }
+
+  function bindQuickReplies(target, replies, onPick) {
+    if (!target) return;
+    target.innerHTML = '';
+    replies.forEach(reply => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'quick-reply-chip';
+      button.textContent = reply;
+      button.addEventListener('click', () => onPick(reply));
+      target.appendChild(button);
+    });
+  }
+
+  function ensureMessageThreads() {
+    const existing = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
+    if (existing.length) return existing;
+    const seeded = [
+      createMessageThread(patients[0], [
+        createMessage('client', 'Hej, jag har fyllt i veckans registrering men är osäker på sista delen.', '2026-05-04 09:12'),
+        createMessage('therapist', 'Tack, jag ser den. Vi går igenom sista delen tillsammans i nästa session.', '2026-05-04 10:03')
+      ]),
+      createMessageThread(patients[1], [
+        createMessage('client', 'Jag sov bättre i natt men undrar hur noga jag ska fylla i uppvaknanden.', '2026-05-04 15:44')
+      ]),
+      createMessageThread(patients[2], [
+        createMessage('therapist', 'Bekräftar torsdag 14.00. Ta gärna med dina anteckningar om veckan.', '2026-05-04 11:20')
+      ])
+    ];
+    localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(seeded));
+    return seeded;
+  }
+
+  function createMessageThread(patient, messages = []) {
+    return {
+      patientId: patient.id,
+      patientName: patient.name,
+      therapistName: 'Dr. Lindgren',
+      messages
+    };
+  }
+
+  function createMessage(author, text, timestamp = new Date().toLocaleString('sv-SE')) {
+    return {
+      id: `msg_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      author,
+      text,
+      timestamp
+    };
+  }
+
+  function getMessageThreads() {
+    return ensureMessageThreads();
+  }
+
+  function saveMessageThreads(threads) {
+    localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(threads));
+  }
+
+  function sendMessage(author, patientId, rawText) {
+    const text = rawText.trim();
+    if (!text) {
+      showToast('Tomt meddelande', 'Skriv något innan du skickar.');
+      return;
+    }
+    const threads = getMessageThreads();
+    let thread = threads.find(item => item.patientId === patientId);
+    if (!thread) {
+      const patient = patients.find(item => item.id === patientId) || patients[0];
+      thread = createMessageThread(patient, []);
+      threads.unshift(thread);
+    }
+    thread.messages.push(createMessage(author, text));
+    saveMessageThreads(threads);
+    renderMessages();
+    showToast(author === 'therapist' ? 'Svar skickat' : 'Meddelande skickat', patientLabel(patientId));
+  }
+
+  function renderMessages() {
+    renderTherapistThreads();
+    renderTherapistConversation();
+    renderClientConversation();
+  }
+
+  function renderTherapistThreads() {
+    if (!els.therapistThreadList) return;
+    const threads = getMessageThreads();
+    if (!threads.some(item => item.patientId === state.activeTherapistThreadPatientId)) {
+      state.activeTherapistThreadPatientId = threads[0]?.patientId || patients[0].id;
+    }
+    els.therapistThreadList.innerHTML = '';
+    threads.forEach(thread => {
+      const lastMessage = thread.messages.at(-1);
+      const unreadCount = thread.messages.filter(message => message.author === 'client').length;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `message-thread-button ${thread.patientId === state.activeTherapistThreadPatientId ? 'active' : ''}`;
+      button.innerHTML = `
+        <div class="message-thread-top">
+          <div>
+            <div class="list-primary">${escapeHtml(thread.patientName)}</div>
+            <div class="message-thread-meta"><span>${escapeHtml(thread.patientId)}</span><span>${escapeHtml(lastMessage?.timestamp || 'Ingen aktivitet ännu')}</span></div>
+          </div>
+          <span class="message-count-badge">${thread.messages.length}</span>
+        </div>
+        <div class="message-thread-preview">${escapeHtml(compactText(lastMessage?.text || 'Starta en tråd med patienten.', 88))}</div>
+        <div class="message-thread-meta"><span>${unreadCount ? unreadCount + ' patientmeddelanden' : 'Ingen ny patienttext'}</span></div>
+      `;
+      button.addEventListener('click', () => {
+        state.activeTherapistThreadPatientId = thread.patientId;
+        state.activeClientPatientId = thread.patientId;
+        renderMessages();
+      });
+      els.therapistThreadList.appendChild(button);
+    });
+  }
+
+  function renderTherapistConversation() {
+    const thread = getMessageThreads().find(item => item.patientId === state.activeTherapistThreadPatientId);
+    if (!thread) return;
+    if (els.therapistThreadTitle) els.therapistThreadTitle.textContent = thread.patientName;
+    if (els.therapistThreadSubtitle) els.therapistThreadSubtitle.textContent = `Säker tråd kopplad till ${thread.patientId}. Här kan terapeuten läsa och svara i samma flöde.`;
+    if (els.therapistThreadStatus) els.therapistThreadStatus.textContent = `${thread.messages.length} meddelanden`;
+    renderMessageList(els.therapistMessageList, thread.messages, { viewer: 'therapist' });
+  }
+
+  function renderClientConversation() {
+    const thread = getMessageThreads().find(item => item.patientId === state.activeClientPatientId) || getMessageThreads()[0];
+    if (!thread) return;
+    state.activeClientPatientId = thread.patientId;
+    if (els.clientThreadTitle) els.clientThreadTitle.textContent = `Kontakt med ${thread.therapistName}`;
+    if (els.clientThreadSubtitle) els.clientThreadSubtitle.textContent = `${thread.patientName} kan skriva frågor, status och reflektioner här i ett enkelt första flöde.`;
+    if (els.clientThreadStatus) els.clientThreadStatus.textContent = `Senast uppdaterad ${thread.messages.at(-1)?.timestamp || 'nyss'}`;
+    renderMessageList(els.clientMessageList, thread.messages, { viewer: 'client' });
+  }
+
+  function renderMessageList(target, messages, { viewer }) {
+    if (!target) return;
+    target.innerHTML = '';
+    if (!messages.length) {
+      target.innerHTML = '<div class="message-empty-state">Inga meddelanden ännu. Starta en lugn första kontakt här.</div>';
+      return;
+    }
+    messages.forEach(message => {
+      const bubble = document.createElement('div');
+      const isOutgoing = (viewer === 'therapist' && message.author === 'therapist') || (viewer === 'client' && message.author === 'client');
+      bubble.className = `chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`;
+      bubble.innerHTML = `${escapeHtml(message.text)}<small>${message.author === 'therapist' ? 'Dr. Lindgren' : patientLabel(state.activeClientPatientId)} · ${escapeHtml(message.timestamp)}</small>`;
+      target.appendChild(bubble);
+    });
+  }
+
+  function patientLabel(patientId) {
+    return patients.find(item => item.id === patientId)?.name || 'Patient';
   }
 
   function addBlock(type, beforeId = null) {

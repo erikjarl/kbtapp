@@ -197,15 +197,25 @@
         <div class="split-layout">
           <div class="card message-sidebar">
             <h3>Trådar</h3>
-            <div class="list-item"><span class="list-primary">Maja Svensson</span><span class="list-secondary">Ny hemuppgift skickad</span></div>
-            <div class="list-item"><span class="list-primary">Erik Johansson</span><span class="list-secondary">Fråga om sömn</span></div>
-            <div class="list-item"><span class="list-primary">Linda Berg</span><span class="list-secondary">Bekräftad tid torsdag</span></div>
+            <div class="message-thread-list" id="therapist-thread-list"></div>
           </div>
-          <div class="card message-thread">
-            <h3>Aktiv tråd</h3>
-            <div class="chat-bubble incoming">Hej, jag har fyllt i veckans registrering men är osäker på sista delen.</div>
-            <div class="chat-bubble outgoing">Tack, jag ser den. Vi går igenom sista delen tillsammans i nästa session.</div>
-            <div class="composer-placeholder">Här kommer senare ett säkert meddelandefält kopplat till patient_id och thread_id.</div>
+          <div class="card message-thread" id="therapist-message-thread">
+            <div class="message-thread-head">
+              <div>
+                <h3 id="therapist-thread-title">Aktiv tråd</h3>
+                <p class="sub" id="therapist-thread-subtitle">Välj en patienttråd för att läsa och svara.</p>
+              </div>
+              <span class="library-card-type" id="therapist-thread-status">Trygg kanal</span>
+            </div>
+            <div class="message-bubble-list" id="therapist-message-list"></div>
+            <form class="message-composer" id="therapist-message-form">
+              <label class="composer-label" for="therapist-message-input">Svara som terapeut</label>
+              <textarea id="therapist-message-input" class="composer-textarea" placeholder="Skriv ett kort, tryggt svar till patienten..."></textarea>
+              <div class="composer-actions">
+                <div class="message-quick-replies" id="therapist-quick-replies"></div>
+                <button class="builder-action accent" type="submit">Skicka svar</button>
+              </div>
+            </form>
           </div>
         </div>
         <div class="card mt-lg">
@@ -472,10 +482,23 @@
       <section data-page="contact" class="page themed-page themed-coral">
         <div class="page-header"><div><h1>Kontakta min behandlare</h1><p class="sub">Skiss över ett framtida säkert kontaktflöde mellan patient och terapeut.</p></div></div>
         <div class="split-layout">
-          <div class="card message-thread">
-            <div class="chat-bubble outgoing">Hej, jag hann bara göra första delen av hemuppgiften denna vecka.</div>
-            <div class="chat-bubble incoming">Det är helt okej. Fortsätt där du är så följer vi upp det nästa gång.</div>
-            <div class="composer-placeholder">Här kommer senare ett säkert meddelandefält för patientens kontakt med sin behandlare.</div>
+          <div class="card message-thread" id="client-message-thread">
+            <div class="message-thread-head">
+              <div>
+                <h3 id="client-thread-title">Kontakt med Dr. Lindgren</h3>
+                <p class="sub" id="client-thread-subtitle">Skriv kort om hemuppgiften, frågor eller hur veckan går.</p>
+              </div>
+              <span class="library-card-type" id="client-thread-status">Svarstid inom 1 arbetsdag</span>
+            </div>
+            <div class="message-bubble-list" id="client-message-list"></div>
+            <form class="message-composer" id="client-message-form">
+              <label class="composer-label" for="client-message-input">Skriv till din behandlare</label>
+              <textarea id="client-message-input" class="composer-textarea" placeholder="Skriv en fråga, uppdatering eller reflektion..."></textarea>
+              <div class="composer-actions">
+                <div class="message-quick-replies" id="client-quick-replies"></div>
+                <button class="builder-action accent" type="submit">Skicka meddelande</button>
+              </div>
+            </form>
           </div>
           <div class="card card-list">
             <h3>Kontaktinfo</h3>

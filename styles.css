@@ -176,6 +176,28 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .chat-bubble.incoming{background:#fff5ee;color:#322c27;border-top-left-radius:6px}
 .chat-bubble.outgoing{background:#e0e6ed;color:#21384d;margin-left:auto}
 .composer-placeholder{margin-top:18px;padding:14px;border-radius:12px;border:1px dashed #d8d3cd;color:#6b645e;background:#fbfaf8;font-size:0.87rem}
+.message-thread-list,.message-bubble-list{display:grid;gap:12px}
+.message-thread-button{width:100%;text-align:left;border:1px solid #ece4da;background:linear-gradient(180deg,#fffdf9,#fbf7f1);border-radius:18px;padding:14px;display:grid;gap:8px;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+.message-thread-button:hover{border-color:#b8c7d7;box-shadow:0 10px 24px rgba(43,95,138,0.08);transform:translateY(-1px)}
+.message-thread-button.active{border-color:#2b5f8a;box-shadow:0 0 0 2px rgba(43,95,138,0.12)}
+.message-thread-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.message-thread-meta{display:flex;flex-wrap:wrap;gap:8px;color:#6b645e;font-size:.78rem}
+.message-thread-preview{color:#5f5852;font-size:.88rem;line-height:1.45}
+.message-count-badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 8px;border-radius:999px;background:#eef8f6;color:#2e7d78;font-size:.76rem;font-weight:700}
+.message-thread{display:grid;gap:14px}
+.message-thread-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.message-bubble-list{min-height:240px;align-content:start}
+.chat-bubble{display:grid;gap:6px}
+.chat-bubble small{display:block;color:inherit;opacity:.72;font-size:.74rem}
+.message-composer{display:grid;gap:10px;margin-top:6px;padding-top:14px;border-top:1px solid #ece4da}
+.composer-label{font-size:.82rem;font-weight:700;color:#5f5852}
+.composer-textarea{width:100%;min-height:104px;border-radius:18px;border:1px solid #ddd5ca;background:#fffdfa;padding:14px 16px;color:#241f1b;resize:vertical}
+.composer-textarea:focus{outline:none;border-color:#2b5f8a;box-shadow:0 0 0 3px rgba(43,95,138,0.12)}
+.composer-actions{display:flex;gap:12px;justify-content:space-between;align-items:flex-end;flex-wrap:wrap}
+.message-quick-replies{display:flex;gap:8px;flex-wrap:wrap}
+.quick-reply-chip{border:1px solid #e0d6c7;background:#fffdfa;color:#5f5852;border-radius:999px;padding:8px 12px;font-size:.8rem;font-weight:600;cursor:pointer;transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+.quick-reply-chip:hover{transform:translateY(-1px);border-color:#b8c7d7;box-shadow:0 8px 20px rgba(43,95,138,0.08)}
+.message-empty-state{padding:20px;border-radius:18px;border:1px dashed #d8d3cd;background:#fbfaf8;color:#6b645e}
 .integration-note p{margin:0;color:#5f5852}
 .therapist-image-area{margin-top:20px;border-radius:16px;overflow:hidden;max-height:200px}
 .therapist-image-area img{width:100%;height:200px;object-fit:cover;opacity:0.78;filter:saturate(.88)}
@@ -389,6 +411,7 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
   .hamburger{display:block}
   .builder-toolbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;overflow:hidden;padding-bottom:6px}
   .builder-toolbar .builder-action{width:100%;min-width:0;white-space:normal;text-align:center}
+  .composer-actions .builder-action{width:auto}
   .builder-layout{grid-template-columns:1fr;gap:12px;min-width:0}
   .block-panel,.builder-canvas{min-height:auto;min-width:0;width:100%}
   .block-panel{overflow:hidden;padding:12px}
@@ -420,6 +443,9 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
   .builder-topbar{align-items:flex-start;flex-direction:column}
   .builder-toolbar{gap:8px;grid-template-columns:1fr}
   .builder-toolbar .builder-action{white-space:normal}
+  .message-thread-top{flex-direction:column}
+  .chat-bubble{max-width:100%}
+  .composer-textarea{min-height:120px}
   .library-block{min-width:86vw;max-width:86vw;padding:12px}
   .field-row{grid-template-columns:1fr}
   .block-order-bar{align-items:flex-start;flex-direction:column}
