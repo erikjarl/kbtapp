@@ -154,6 +154,9 @@ function initMaterialBuilder() {
     assignmentShell: document.getElementById('assignment-shell'),
     assignmentModalTitle: document.getElementById('assignment-modal-title'),
     submitAssignmentModal: document.getElementById('submit-assignment-modal'),
+    submissionModal: document.getElementById('submission-modal'),
+    submissionShell: document.getElementById('submission-shell'),
+    submissionModalTitle: document.getElementById('submission-modal-title'),
     toastArea: document.getElementById('toast-area'),
     therapistThreadList: document.getElementById('therapist-thread-list'),
     therapistMessageList: document.getElementById('therapist-message-list'),
@@ -242,6 +245,7 @@ function initMaterialBuilder() {
         if (type === 'preview') closeModal(els.previewModal);
         if (type === 'assign') closeModal(els.assignModal);
         if (type === 'assignment') closeModal(els.assignmentModal);
+        if (type === 'submission') closeModal(els.submissionModal);
       });
     });
     els.submitAssignmentModal?.addEventListener('click', () => {
@@ -1226,16 +1230,25 @@ function initMaterialBuilder() {
     if (!item) return;
     item.status = 'inskickad';
     localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
+
     const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
-    submissions.unshift({
-      id: `submission_${Date.now()}`,
+    const answersSnapshot = structuredClone(item.answers || {});
+    const summary = buildSubmissionSummary(item.blocks, answersSnapshot);
+    const existingIndex = submissions.findIndex(entry => entry.assignmentId === item.id);
+    const submissionEntry = {
+      id: existingIndex >= 0 ? submissions[existingIndex].id : `submission_${Date.now()}`,
       assignmentId: item.id,
       patientId: item.patientId,
       patientName: item.patientName,
       title: item.title,
       submittedAt: new Date().toLocaleString('sv-SE'),
-      blocks: item.blocks
-    });
+      blocks: structuredClone(item.blocks),
+      answers: answersSnapshot,
+      summary
+    };
+
+    if (existingIndex >= 0) submissions.splice(existingIndex, 1);
+    submissions.unshift(submissionEntry);
     localStorage.setItem(STORAGE_KEYS.submissions, JSON.stringify(submissions));
     renderSavedCollections();
     showToast('Inskickat', `${item.title} skickades in av ${item.patientName}.`);
@@ -1250,8 +1263,171 @@ function initMaterialBuilder() {
       return;
     }
     submissions.forEach(item => {
-      els.therapistSubmissionsGrid.appendChild(createLibraryCard(item.title, `${item.patientName} · inskickad ${item.submittedAt} · ${item.blocks.length} block`));
+      const card = createLibraryCard({
+        title: item.title,
+        description: `${item.patientName} · inskickad ${item.submittedAt} · ${item.blocks.length} block`,
+        meta: [
+          `${item.summary?.answeredCount || 0} svar ifyllda`,
+          item.summary?.preview || 'Öppna för att granska svar'
+        ],
+        type: 'Inskick'
+      });
+      const [primaryButton, secondaryButton] = card.querySelectorAll('button');
+      primaryButton.textContent = 'Öppna inskick';
+      secondaryButton.textContent = 'Öppna patienttråd';
+      primaryButton.addEventListener('click', () => openSubmission(item.id));
+      secondaryButton.addEventListener('click', () => {
+        state.activeTherapistThreadPatientId = item.patientId;
+        state.activeClientPatientId = item.patientId;
+        renderMessages();
+        document.querySelector('#therapist-view .nav-item[data-page="messages"]')?.click();
+      });
+      els.therapistSubmissionsGrid.appendChild(card);
     });
+  }
+
+  function openSubmission(submissionId) {
+    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    const item = submissions.find(entry => entry.id === submissionId);
+    if (!item || !els.submissionShell) return;
+    if (els.submissionModalTitle) els.submissionModalTitle.textContent = item.title;
+    els.submissionShell.innerHTML = '';
+
+    const stage = document.createElement('section');
+    stage.className = 'assignment-stage';
+    stage.innerHTML = `<div><span class="section-kicker">Inskickad av patient</span><h4>${escapeHtml(item.title)}</h4><p>Här kan terapeuten granska vad patienten faktiskt skickade in, block för block, utan att lämna gränssnittet.</p></div><div class="assignment-summary"><div><strong>Patient</strong><span>${escapeHtml(item.patientName)}</span></div><div><strong>Inskickad</strong><span>${escapeHtml(item.submittedAt)}</span></div><div><strong>Svar</strong><span>${item.summary?.answeredCount || 0} ifyllda delar</span></div></div>`;
+    els.submissionShell.appendChild(stage);
+
+    item.blocks.forEach((block, index) => {
+      const card = document.createElement('section');
+      card.className = 'assignment-form-card';
+      card.appendChild(renderSubmissionBlock(block, item.answers || {}, index));
+      els.submissionShell.appendChild(card);
+    });
+
+    openModal(els.submissionModal);
+  }
+
+  function renderSubmissionBlock(block, answers, blockIndex) {
+    const wrap = document.createElement('div');
+    const answer = answers[block.id] || {};
+
+    switch (block.type) {
+      case 'info': {
+        const title = document.createElement('h4');
+        title.textContent = block.settings.title || 'Informationstext';
+        const text = document.createElement('p');
+        text.className = 'preview-text';
+        text.textContent = block.settings.content || 'Ingen text ännu.';
+        wrap.append(title, text);
+        break;
+      }
+      case 'textfield': {
+        ensureTextFieldSettings(block);
+        const title = document.createElement('div');
+        title.className = 'block-title';
+        title.textContent = block.settings.title || 'Textfält';
+        wrap.appendChild(title);
+        const list = document.createElement('div');
+        list.className = 'assignment-text-field-list';
+        block.settings.fields.forEach((fieldItem, fieldIndex) => {
+          const value = answer[`field_${fieldIndex}`] || '';
+          const fieldWrap = document.createElement('div');
+          fieldWrap.className = 'text-field-card';
+          fieldWrap.innerHTML = `<div class="assignment-field-title">${escapeHtml(fieldItem.title || `Fritext ${fieldIndex + 1}`)}</div>${fieldItem.prompt ? `<div class="assignment-field-help">${escapeHtml(fieldItem.prompt)}</div>` : ''}<div class="submission-answer-box">${escapeHtml(value || 'Inget svar inskickat ännu.')}</div>`;
+          list.appendChild(fieldWrap);
+        });
+        wrap.appendChild(list);
+        break;
+      }
+      case 'rating': {
+        const label = document.createElement('div');
+        label.className = 'block-title';
+        label.textContent = block.settings.label || 'Skattningsbox';
+        const result = document.createElement('div');
+        result.className = 'submission-answer-box';
+        result.textContent = answer.value ?? 'Ingen skattning inskickad';
+        wrap.append(label, result);
+        break;
+      }
+      case 'table': {
+        const title = document.createElement('div');
+        title.className = 'block-title';
+        title.textContent = `Tabellblock ${blockIndex + 1}`;
+        wrap.appendChild(title);
+        const box = document.createElement('div');
+        box.className = 'table-wrapper';
+        const table = document.createElement('table');
+        table.className = 'material-table';
+        const tbody = document.createElement('tbody');
+        block.settings.cells.forEach((row, rowIndex) => {
+          const tr = document.createElement('tr');
+          row.forEach((cell, colIndex) => {
+            const isHeader = block.settings.headerRow && rowIndex === 0;
+            const isRowHeader = block.settings.firstColumnHeaders && colIndex === 0 && (!block.settings.headerRow || rowIndex > 0);
+            const td = document.createElement(isHeader || isRowHeader ? 'th' : 'td');
+            if (cell.type === 'patient' && !isHeader && !isRowHeader) {
+              td.textContent = answer[`cell_${rowIndex}_${colIndex}`] || '—';
+            } else {
+              td.textContent = cell.text || (isRowHeader ? `Radrubrik ${rowIndex}` : 'Tom statisk cell');
+            }
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        box.appendChild(table);
+        wrap.appendChild(box);
+        break;
+      }
+      case 'emoji': {
+        const label = document.createElement('div');
+        label.className = 'block-title';
+        label.textContent = block.settings.label || 'Emoji-skala';
+        const result = document.createElement('div');
+        result.className = 'submission-answer-box';
+        result.textContent = answer.value ? `${emojiScale[answer.value - 1]?.emoji || ''} ${emojiScale[answer.value - 1]?.label || answer.value}` : 'Ingen emoji-skattning inskickad';
+        wrap.append(label, result);
+        break;
+      }
+    }
+
+    return wrap;
+  }
+
+  function buildSubmissionSummary(blocks, answers) {
+    let answeredCount = 0;
+    const notes = [];
+
+    blocks.forEach(block => {
+      const answer = answers[block.id] || {};
+      if (block.type === 'textfield') {
+        ensureTextFieldSettings(block);
+        const values = Object.values(answer).filter(Boolean);
+        if (values.length) {
+          answeredCount += values.length;
+          if (notes.length < 2) notes.push(compactText(values[0], 40));
+        }
+      }
+      if (block.type === 'rating' || block.type === 'emoji') {
+        if (answer.value !== undefined && answer.value !== null && answer.value !== '') {
+          answeredCount += 1;
+          if (notes.length < 2) notes.push(`${getBlockTitle(block)}: ${answer.value}`);
+        }
+      }
+      if (block.type === 'table') {
+        const values = Object.values(answer).filter(Boolean);
+        if (values.length) {
+          answeredCount += values.length;
+          if (notes.length < 2) notes.push(`Tabell: ${compactText(values[0], 32)}`);
+        }
+      }
+    });
+
+    return {
+      answeredCount,
+      preview: notes.length ? notes.join(' · ') : 'Svar ännu ganska kortfattade'
+    };
   }
 
   function renderCollectionGrid(target, seed, savedItems, sourceKind) {

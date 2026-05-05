@@ -93,3 +93,36 @@
 ### Nästa steg
 - Välj nästa tydliga del som fortfarande känns statisk: antingen riktig auth-grund eller formulär-/åtgärdsflöden i meddelanden och uppgifter
 - Om meddelandespåret fortsätter: lägg till enkel composer-status, tydligare oläst/nytt-markering och gärna koppling från inskickad hemuppgift till relevant tråd
+
+## 2026-05-05 — Inskickad hemuppgift kan nu granskas av terapeut
+
+### Vad jag arbetade med
+- En avgränsad del: kedjan från patientens ifyllda hemuppgift till terapeutens vy för inskickat material
+- Målet var att göra terapeutens sektion `Inskickat patientmaterial` verkligt användbar istället för enbart en lista med statiska kort
+
+### Vad jag ändrade
+- Lade till en ny terapeutmodal för granskning av inskickade hemuppgifter block för block
+- Började spara en snapshot av patientens faktiska svar när en hemuppgift skickas in
+- Gjorde inskick smartare så samma tilldelade hemuppgift uppdaterar sitt inskick istället för att skapa otydliga dubbletter varje gång
+- Lade till sammanfattning per inskick med antal ifyllda svar och kort previewtext direkt i terapeutens kortvy
+- Gjorde det möjligt att från ett inskick hoppa vidare till rätt patienttråd i `Patientmeddelanden`
+- Lade till enkel styling för läsbara svarsrutor i terapeutens granskningsläge
+- Skapade ett riktat Playwright-test för just inskick/granskningsflödet
+
+### Vad som nu fungerar
+- Patientens ifyllda svar följer nu med in i inskicket och kan öppnas i terapeutvyn
+- Terapeuten kan öppna ett inskick och läsa svaren i ett sammanhållet granskningsläge utan att lämna appen
+- Terapeuten kan från ett inskick hoppa direkt till rätt patienttråd för uppföljning
+- Upprepad inskickning av samma tilldelade uppgift ersätter tidigare inskickspost istället för att stapla onödiga dubbletter
+- Praktiskt test verifierade:
+  - desktop 1440×900: skapa material → tilldela patient → fyll i formulär som patient → skicka in → öppna inskick i terapeutvy och se faktisk fritext
+  - mobil 390×844: tilldela enkel uppgift → fyll i emoji-svar som patient → skicka in → öppna inskick i terapeutvy och se inskickad emoji-status
+
+### Vad som inte fungerar
+- Flödet är fortfarande helt lokalt/mockat i `localStorage` utan backend, användarkonton eller verklig synk mellan olika enheter
+- Terapeuten kan ännu bara läsa inskick; det finns ingen strukturerad återkopplingsknapp, kommentarsfält per block eller markering som `granskad`
+- Browser-verktyget användes inte här eftersom tidigare host-attach varit opålitligt för denna app; praktisk testning gjordes istället med lokal Playwright-körning
+
+### Nästa steg
+- Välj nästa tydliga del i samma område: antingen återkopplingsflöde från terapeut tillbaka till patient eller enklare statusmarkeringar för uppgift `tilldelad / påbörjad / inskickad / granskad`
+- Alternativt byt spår till auth-grund om målet blir att börja knyta vyerna till riktiga roller och sessioner
