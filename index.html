@@ -220,11 +220,23 @@
         </div>
         <div class="card mt-lg">
           <div class="page-header compact-header"><div><h3>Inskickat patientmaterial</h3><p class="sub">När patienten skickar in ett material visas det här i terapeutvyn.</p></div></div>
-          <div class="submission-filter-bar" aria-label="Filtrera inskick">
-            <button class="submission-filter-chip is-active" type="button" data-submission-filter="alla">Alla</button>
-            <button class="submission-filter-chip" type="button" data-submission-filter="inskickad">Inskickade</button>
-            <button class="submission-filter-chip" type="button" data-submission-filter="granskad">Granskade</button>
+          <div class="submission-toolbar">
+            <div class="submission-filter-bar" aria-label="Filtrera inskick">
+              <button class="submission-filter-chip is-active" type="button" data-submission-filter="alla">Alla</button>
+              <button class="submission-filter-chip" type="button" data-submission-filter="inskickad">Inskickade</button>
+              <button class="submission-filter-chip" type="button" data-submission-filter="granskad">Granskade</button>
+            </div>
+            <label class="submission-sort-control" for="submission-sort-select">
+              <span>Sortera</span>
+              <select id="submission-sort-select">
+                <option value="needs-review">Behöver granskas först</option>
+                <option value="recent">Senast inkommet</option>
+                <option value="reviewed-recent">Senast granskat</option>
+                <option value="patient">Patient A–Ö</option>
+              </select>
+            </label>
           </div>
+          <div class="submission-list-summary" id="submission-list-summary">Laddar inskick…</div>
           <div class="assignment-grid" id="therapist-submissions-grid"></div>
         </div>
       </section>

@@ -254,3 +254,35 @@
 ### Nästa steg
 - Ett bra nästa litet steg är att lägga till enkel sortering eller snabbfokus på `senast inkommet` respektive `behöver granskas`
 - Alternativt gå tillbaka till återkopplingsflödet och köra ett mer blandat end-to-end-varv där modaler, filtrering och patientvisning används i samma session
+
+## 2026-05-05 — Sortering och prioritering i terapeutens inskicklista
+
+### Vad jag arbetade med
+- En avgränsad del: terapeutens lista `Inskickat patientmaterial`
+- Målet var att göra listan snabbare att arbeta i när flera inskick finns, utan att bygga om datamodellen eller lägga till backend
+
+### Vad jag ändrade
+- Lade till en enkel sorteringskontroll ovanför inskicklistan med valen `Behöver granskas först`, `Senast inkommet`, `Senast granskat` och `Patient A–Ö`
+- Gjorde standardläget prioriterat mot `inskickad` före `granskad`, och därefter nyast först inom respektive grupp
+- Lade till en kort sammanfattningsrad som visar hur många inskick som visas, hur många som väntar granskning och vilken sortering som används
+- Behöll lösningen helt lokal i befintlig frontend, kopplad till samma mockade `localStorage`-data som resten av inskicksflödet
+- Lade till responsiv styling så kontrollen fungerar både i desktopbredd och mobilbredd
+- Sparade nya QA-skärmdumpar i `qa-artifacts/submission-sort-desktop.png` och `qa-artifacts/submission-sort-mobile.png`
+
+### Vad som nu fungerar
+- Terapeuten kan nu växla mellan flera enkla sorteringslägen utan att lämna sidan eller trigga ny laddning
+- Standardläget hjälper terapeuten att se sådant som fortfarande behöver granskas före redan granskade inskick
+- Sammanfattningsraden gör läget tydligare när filter och sortering kombineras
+- Praktiskt test verifierade med seedade mock-inskick:
+  - desktop 1440×900: standardordning visade `Aktivitetsplan`, `Exponeringslogg`, `Sömnlogg vecka 1`; `Patient A–Ö` gav alfabetisk patientordning och `Granskade` + `Senast granskat` visade korrekt bara `Sömnlogg vecka 1`
+  - mobil 390×844: `Inskickade` + `Senast inkommet` visade korrekt `Aktivitetsplan` före `Exponeringslogg`
+- `script.js` passerar fortsatt `node --check`
+
+### Vad som inte fungerar
+- Browser-verktyget kunde fortfarande inte användas eftersom host-attach mot Chrome saknade fungerande debug-port; praktisk verifiering gjordes därför via lokal Playwright mot systemets Chrome
+- Flödet är fortfarande helt lokalt/mockat i `localStorage` utan riktig backend, autentisering eller synk mellan enheter
+- Sorteringen är fortfarande enkel; det finns ännu ingen kombinerad sort/filter-panel för datumintervall, patientgrupper eller verklig prioriteringslogik
+
+### Nästa steg
+- Ett rimligt nästa lilla steg är att lägga till snabbåtgärd för `öppna nästa som väntar granskning` eller enklare markering av `behöver svar från terapeut`
+- Alternativt återgå till återkopplingsspåret och låta sortering, filtrering och granskningsmodal användas i samma sammanhängande end-to-end-varv

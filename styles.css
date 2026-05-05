@@ -381,10 +381,15 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .assignment-feedback-box p{margin:0;color:#2f2b27;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
 .assignment-feedback-meta{font-size:.82rem;color:#5f5852}
 .submission-answer-box{margin-top:10px;padding:14px 16px;border-radius:14px;background:#f8f4ee;border:1px solid #e7e1d9;color:#2f2b27;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+.submission-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin:4px 0 10px}
 .submission-filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 16px}
 .submission-filter-chip{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;border:1px solid #ddd4c9;background:#fffdfa;color:#5a534d;font-size:.84rem;font-weight:700;cursor:pointer;transition:all .15s ease}
 .submission-filter-chip:hover{border-color:#cdbda8;background:#fff7ef}
 .submission-filter-chip.is-active{background:#1f1b18;border-color:#1f1b18;color:#f8f4ee;box-shadow:0 10px 22px rgba(31,27,24,.12)}
+.submission-sort-control{display:grid;gap:6px;min-width:220px;color:#5f5852;font-size:.84rem;font-weight:700}
+.submission-sort-control select{appearance:none;border:1px solid #ddd4c9;background:#fffdfa;color:#2f2b27;border-radius:14px;padding:11px 14px;font:inherit;box-shadow:0 8px 18px rgba(31,27,24,.04)}
+.submission-sort-control select:focus{outline:none;border-color:#1f1b18;box-shadow:0 0 0 3px rgba(31,27,24,.08)}
+.submission-list-summary{margin:0 0 16px;color:#5f5852;font-size:.9rem;line-height:1.5}
 .submission-feedback-panel{display:grid;gap:10px;margin-top:16px;padding:16px;border-radius:20px;background:#fbf8f4;border:1px solid #e7e1d9}
 .submission-feedback-input{min-height:110px}
 .assignment-rating-row,.assignment-emoji-row{display:flex;flex-wrap:wrap;gap:10px}
@@ -470,6 +475,10 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
   .reorder-actions{width:100%;justify-content:flex-start}
   .block-top{align-items:flex-start}
   .block-meta{align-items:flex-start}
+  .submission-toolbar{align-items:stretch}
+  .submission-filter-bar{gap:8px;margin-bottom:0}
+  .submission-filter-chip{padding:9px 12px;font-size:.8rem}
+  .submission-sort-control{min-width:0;width:100%}
   .text-field-card-head{align-items:flex-start}
   .emoji-row{grid-template-columns:repeat(3,minmax(0,1fr))}
   .toast-area{left:16px;right:16px;bottom:76px}

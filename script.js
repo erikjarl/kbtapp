@@ -140,7 +140,8 @@ function initMaterialBuilder() {
     activeAssignmentId: null,
     activeSubmissionId: null,
     activeTherapistThreadPatientId: patients[0].id,
-    submissionFilter: 'alla'
+    submissionFilter: 'alla',
+    submissionSort: 'needs-review'
   };
 
   const collapsedTypes = new Set(['rating', 'textfield', 'table', 'emoji', 'info']);
@@ -163,6 +164,8 @@ function initMaterialBuilder() {
     clientAssignmentsGrid: document.getElementById('client-assignments-grid'),
     clientMaterialsGrid: document.getElementById('client-materials-grid'),
     therapistSubmissionsGrid: document.getElementById('therapist-submissions-grid'),
+    submissionSortSelect: document.getElementById('submission-sort-select'),
+    submissionListSummary: document.getElementById('submission-list-summary'),
     assignmentModal: document.getElementById('assignment-modal'),
     assignmentShell: document.getElementById('assignment-shell'),
     assignmentModalTitle: document.getElementById('assignment-modal-title'),
@@ -1301,8 +1304,12 @@ function initMaterialBuilder() {
     if (!els.therapistSubmissionsGrid) return;
     const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
     const activeFilter = state.submissionFilter || 'alla';
-    const filteredSubmissions = submissions.filter(item => activeFilter === 'alla' ? true : (item.status || 'inskickad') === activeFilter);
+    const filteredSubmissions = submissions
+      .filter(item => activeFilter === 'alla' ? true : (item.status || 'inskickad') === activeFilter)
+      .sort(compareSubmissions);
     syncSubmissionFilterButtons(submissions);
+    syncSubmissionSortControl();
+    syncSubmissionListSummary(submissions, filteredSubmissions, activeFilter);
     els.therapistSubmissionsGrid.innerHTML = '';
     if (!submissions.length) {
       els.therapistSubmissionsGrid.innerHTML = '<div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Väntar</span><h3>Inga inskick ännu</h3></div></div><p>När patienten skickar in material visas det här i en tydlig lista för snabb uppföljning.</p><div class="library-card-meta"><span>Redo för uppföljning</span><span>Visas i terapeutvyn</span></div></div>';
@@ -1345,6 +1352,13 @@ function initMaterialBuilder() {
         renderTherapistSubmissions();
       });
     });
+
+    if (els.submissionSortSelect) {
+      els.submissionSortSelect.addEventListener('change', () => {
+        state.submissionSort = els.submissionSortSelect.value || 'needs-review';
+        renderTherapistSubmissions();
+      });
+    }
   }
 
   function syncSubmissionFilterButtons(submissions = []) {
@@ -1361,6 +1375,62 @@ function initMaterialBuilder() {
       button.classList.toggle('is-active', filter === (state.submissionFilter || 'alla'));
       button.textContent = `${baseLabel} (${count})`;
     });
+  }
+
+  function syncSubmissionSortControl() {
+    if (!els.submissionSortSelect) return;
+    els.submissionSortSelect.value = state.submissionSort || 'needs-review';
+  }
+
+  function syncSubmissionListSummary(submissions = [], filteredSubmissions = [], activeFilter = 'alla') {
+    if (!els.submissionListSummary) return;
+    if (!submissions.length) {
+      els.submissionListSummary.textContent = 'Redo att visa nya patientinskick så snart de kommer in.';
+      return;
+    }
+    const pendingCount = submissions.filter(item => (item.status || 'inskickad') === 'inskickad').length;
+    const reviewedCount = submissions.filter(item => (item.status || 'inskickad') === 'granskad').length;
+    const filterLabel = activeFilter === 'alla' ? 'alla inskick' : activeFilter === 'inskickad' ? 'inskick som väntar granskning' : 'redan granskade inskick';
+    const sortLabel = getSubmissionSortLabel(state.submissionSort || 'needs-review').toLowerCase();
+    els.submissionListSummary.textContent = `Visar ${filteredSubmissions.length} av ${submissions.length} ${filterLabel}. ${pendingCount} väntar granskning och ${reviewedCount} är redan granskade. Sortering: ${sortLabel}.`;
+  }
+
+  function getSubmissionSortLabel(sortKey) {
+    return ({
+      'needs-review': 'Behöver granskas först',
+      'recent': 'Senast inkommet',
+      'reviewed-recent': 'Senast granskat',
+      'patient': 'Patient A–Ö'
+    })[sortKey] || 'Behöver granskas först';
+  }
+
+  function compareSubmissions(a, b) {
+    const sortKey = state.submissionSort || 'needs-review';
+    if (sortKey === 'patient') {
+      return (a.patientName || '').localeCompare(b.patientName || '', 'sv');
+    }
+    if (sortKey === 'reviewed-recent') {
+      return getSubmissionTimestamp(b.reviewedAt || b.submittedAt) - getSubmissionTimestamp(a.reviewedAt || a.submittedAt);
+    }
+    if (sortKey === 'recent') {
+      return getSubmissionTimestamp(b.submittedAt) - getSubmissionTimestamp(a.submittedAt);
+    }
+
+    const statusRank = value => (value || 'inskickad') === 'inskickad' ? 0 : 1;
+    const rankDiff = statusRank(a.status) - statusRank(b.status);
+    if (rankDiff !== 0) return rankDiff;
+    return getSubmissionTimestamp(b.submittedAt) - getSubmissionTimestamp(a.submittedAt);
+  }
+
+  function getSubmissionTimestamp(value) {
+    if (!value) return 0;
+    const normalized = value.replace(' ', 'T');
+    const direct = Date.parse(normalized);
+    if (!Number.isNaN(direct)) return direct;
+    const match = value.match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!match) return 0;
+    const [, year, month, day, hour, minute, second = '00'] = match;
+    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)).getTime();
   }
 
   function openSubmission(submissionId) {
