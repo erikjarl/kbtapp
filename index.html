@@ -226,15 +226,18 @@
               <button class="submission-filter-chip" type="button" data-submission-filter="inskickad">Inskickade</button>
               <button class="submission-filter-chip" type="button" data-submission-filter="granskad">Granskade</button>
             </div>
-            <label class="submission-sort-control" for="submission-sort-select">
-              <span>Sortera</span>
-              <select id="submission-sort-select">
-                <option value="needs-review">Behöver granskas först</option>
-                <option value="recent">Senast inkommet</option>
-                <option value="reviewed-recent">Senast granskat</option>
-                <option value="patient">Patient A–Ö</option>
-              </select>
-            </label>
+            <div class="submission-toolbar-actions">
+              <button class="builder-action accent-soft submission-next-button" type="button" id="open-next-submission">Öppna nästa som väntar</button>
+              <label class="submission-sort-control" for="submission-sort-select">
+                <span>Sortera</span>
+                <select id="submission-sort-select">
+                  <option value="needs-review">Behöver granskas först</option>
+                  <option value="recent">Senast inkommet</option>
+                  <option value="reviewed-recent">Senast granskat</option>
+                  <option value="patient">Patient A–Ö</option>
+                </select>
+              </label>
+            </div>
           </div>
           <div class="submission-list-summary" id="submission-list-summary">Laddar inskick…</div>
           <div class="assignment-grid" id="therapist-submissions-grid"></div>

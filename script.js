@@ -166,6 +166,7 @@ function initMaterialBuilder() {
     therapistSubmissionsGrid: document.getElementById('therapist-submissions-grid'),
     submissionSortSelect: document.getElementById('submission-sort-select'),
     submissionListSummary: document.getElementById('submission-list-summary'),
+    openNextSubmissionButton: document.getElementById('open-next-submission'),
     assignmentModal: document.getElementById('assignment-modal'),
     assignmentShell: document.getElementById('assignment-shell'),
     assignmentModalTitle: document.getElementById('assignment-modal-title'),
@@ -1359,6 +1360,8 @@ function initMaterialBuilder() {
         renderTherapistSubmissions();
       });
     }
+
+    els.openNextSubmissionButton?.addEventListener('click', () => openNextPendingSubmission());
   }
 
   function syncSubmissionFilterButtons(submissions = []) {
@@ -1386,13 +1389,25 @@ function initMaterialBuilder() {
     if (!els.submissionListSummary) return;
     if (!submissions.length) {
       els.submissionListSummary.textContent = 'Redo att visa nya patientinskick så snart de kommer in.';
+      syncOpenNextSubmissionButton([]);
       return;
     }
-    const pendingCount = submissions.filter(item => (item.status || 'inskickad') === 'inskickad').length;
+    const pendingSubmissions = submissions.filter(item => (item.status || 'inskickad') === 'inskickad');
+    const pendingCount = pendingSubmissions.length;
     const reviewedCount = submissions.filter(item => (item.status || 'inskickad') === 'granskad').length;
     const filterLabel = activeFilter === 'alla' ? 'alla inskick' : activeFilter === 'inskickad' ? 'inskick som väntar granskning' : 'redan granskade inskick';
     const sortLabel = getSubmissionSortLabel(state.submissionSort || 'needs-review').toLowerCase();
     els.submissionListSummary.textContent = `Visar ${filteredSubmissions.length} av ${submissions.length} ${filterLabel}. ${pendingCount} väntar granskning och ${reviewedCount} är redan granskade. Sortering: ${sortLabel}.`;
+    syncOpenNextSubmissionButton(pendingSubmissions);
+  }
+
+  function syncOpenNextSubmissionButton(pendingSubmissions = []) {
+    if (!els.openNextSubmissionButton) return;
+    const nextPending = [...pendingSubmissions].sort(compareSubmissions)[0];
+    els.openNextSubmissionButton.disabled = !nextPending;
+    els.openNextSubmissionButton.textContent = nextPending
+      ? `Öppna nästa som väntar (${nextPending.patientName})`
+      : 'Inget nytt inskick väntar';
   }
 
   function getSubmissionSortLabel(sortKey) {
@@ -1431,6 +1446,21 @@ function initMaterialBuilder() {
     if (!match) return 0;
     const [, year, month, day, hour, minute, second = '00'] = match;
     return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)).getTime();
+  }
+
+  function openNextPendingSubmission() {
+    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    const nextPending = submissions
+      .filter(item => (item.status || 'inskickad') === 'inskickad')
+      .sort(compareSubmissions)[0];
+
+    if (!nextPending) {
+      showToast('Inget väntar', 'Alla aktuella inskick är redan granskade.');
+      return;
+    }
+
+    openSubmission(nextPending.id);
+    showToast('Öppnar nästa inskick', `${nextPending.patientName} · ${nextPending.title}`);
   }
 
   function openSubmission(submissionId) {

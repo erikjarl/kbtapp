@@ -286,3 +286,36 @@
 ### Nästa steg
 - Ett rimligt nästa lilla steg är att lägga till snabbåtgärd för `öppna nästa som väntar granskning` eller enklare markering av `behöver svar från terapeut`
 - Alternativt återgå till återkopplingsspåret och låta sortering, filtrering och granskningsmodal användas i samma sammanhängande end-to-end-varv
+
+## 2026-05-05 — Snabböppning av nästa inskick som väntar granskning
+
+### Vad jag arbetade med
+- En avgränsad del: terapeutens inskickssektion i `Patientmeddelanden`
+- Målet var att göra uppföljningen snabbare genom en enda tydlig snabbåtgärd för att öppna nästa inskick med status `inskickad`
+
+### Vad jag ändrade
+- Lade till en ny snabbknapp ovanför inskickslistan: `Öppna nästa som väntar`
+- Kopplade knappen till befintlig sorteringslogik så den öppnar det mest prioriterade oganskade inskicket i nuvarande enkla ordning
+- Gjorde knapptexten informativ genom att visa vilken patient som står näst på tur
+- Lade till disabled-läge och tomtext när inga nya inskick väntar granskning
+- Lade till lätt responsiv layout för att få snabbknappen och sorteringskontrollen att fungera tillsammans på desktop och mobil
+- Skrev ett riktat Playwright-test: `playwright-next-submission-check.js`
+- Sparade QA-skärmdumpar i `qa-artifacts/next-submission-desktop.png` och `qa-artifacts/next-submission-mobile.png`
+
+### Vad som nu fungerar
+- Terapeuten kan öppna nästa väntande inskick med ett enda klick i stället för att först skanna listan manuellt
+- Snabbknappen uppdateras direkt efter granskning så nästa patient i kö visas i knapptexten
+- När inget nytt väntar blir knappen tydligt inaktiv i stället för att trigga ett oklart flöde
+- Praktiskt test verifierade:
+  - desktop 1440×900: knappen öppnade `Aktivitetsplan` för `Linda Berg`, och efter `Markera som granskad` byttes knapptexten till nästa väntande patient `Erik Johansson`
+  - mobil 390×844: samma snabbknapp öppnade korrekt nästa väntande inskick i granskningsmodalen
+- `script.js` passerar fortsatt `node --check`
+
+### Vad som inte fungerar
+- Browser-verktyget användes inte heller i denna körning; praktisk verifiering gjordes med lokal Playwright mot lokal server
+- Flödet är fortfarande helt lokalt/mockat i `localStorage` utan backend, autentisering eller synk mellan enheter
+- Snabbknappen följer fortfarande den nuvarande enkla prioriteringslogiken; det finns ännu ingen verklig prioritering utifrån exempelvis patientrisk, ålder på inskick eller terapeutens egna markeringar
+
+### Nästa steg
+- Ett naturligt nästa litet steg är att lägga till en tydlig markering som `behöver svar från terapeut` eller `återkoppling saknas` i samma lista
+- Alternativt låta snabbknappen kunna hoppa vidare direkt till nästa väntande inskick efter att ett inskick markerats som granskat eller fått återkoppling
