@@ -46,21 +46,40 @@
           <img src="https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=1200&auto=format&fit=crop" alt="Positivt samtal i lugn miljö" loading="lazy" />
         </div>
       </div>
-      <div class="entry-grid">
-        <a href="#therapist" class="login-role primary" data-role="therapist">
-          <span class="role-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </span>
-          <span class="role-copy"><strong>Öppna terapeutvyn</strong><small>Dashboard, patientmeddelanden, arbetsyta, materialbibliotek och mallbibliotek.</small></span>
-          <span class="role-arrow">→</span>
-        </a>
-        <a href="#client" class="login-role" data-role="client">
-          <span class="role-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6l3 3 3-3V2"/><path d="M4 11a8 8 0 1 0 16 0"/><path d="M12 19v4"/></svg>
-          </span>
-          <span class="role-copy"><strong>Öppna patientvyn</strong><small>Dashboard, hemuppgifter, material och trygg kontakt med behandlare.</small></span>
-          <span class="role-arrow">→</span>
-        </a>
+      <div class="auth-shell">
+        <div class="auth-mode-toggle" role="tablist" aria-label="Välj roll">
+          <button class="auth-role-tab active" type="button" data-auth-role="therapist">Terapeut</button>
+          <button class="auth-role-tab" type="button" data-auth-role="client">Patient</button>
+        </div>
+        <div class="auth-card-grid">
+          <form class="auth-panel" id="login-form">
+            <div class="auth-panel-head">
+              <span class="section-kicker">Logga in</span>
+              <h3>Öppna ditt konto</h3>
+              <p>Använd sparat konto för att komma tillbaka till rätt vy med rätt roll.</p>
+            </div>
+            <label class="auth-label" for="login-email">E-post</label>
+            <input class="auth-input" id="login-email" name="email" type="email" autocomplete="username" placeholder="namn@kbtapp.se" required />
+            <label class="auth-label" for="login-password">Lösenord</label>
+            <input class="auth-input" id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Minst 6 tecken" required />
+            <button class="builder-action accent auth-submit" type="submit">Logga in</button>
+          </form>
+          <form class="auth-panel auth-panel-soft" id="register-form">
+            <div class="auth-panel-head">
+              <span class="section-kicker">Skapa konto</span>
+              <h3>Första riktiga auth-versionen</h3>
+              <p>Nya konton sparas nu lokalt med lösenordshash i backendens JSON-lagring.</p>
+            </div>
+            <label class="auth-label" for="register-name">Namn</label>
+            <input class="auth-input" id="register-name" name="name" type="text" autocomplete="name" placeholder="För- och efternamn" required />
+            <label class="auth-label" for="register-email">E-post</label>
+            <input class="auth-input" id="register-email" name="email" type="email" autocomplete="username" placeholder="namn@kbtapp.se" required />
+            <label class="auth-label" for="register-password">Lösenord</label>
+            <input class="auth-input" id="register-password" name="password" type="password" autocomplete="new-password" placeholder="Minst 6 tecken" required />
+            <button class="builder-action auth-submit" type="submit">Skapa konto</button>
+          </form>
+        </div>
+        <div class="auth-feedback" id="auth-feedback" aria-live="polite">Välj roll och logga in eller skapa ett nytt konto.</div>
       </div>
       <div class="login-mini-grid">
         <article class="mini-card coral-card">
@@ -80,8 +99,8 @@
         </article>
       </div>
       <div class="login-footnote">
-        <p class="login-note">Detta är frontend-demovyer. Inga riktiga användarkonton eller patientdata används ännu.</p>
-        <p class="login-updated">Uppdaterades: 2026-05-05 10:46 CEST</p>
+        <p class="login-note">Konton och lösenord sparas nu lokalt i en enkel backend. Övrig appdata är fortfarande en första version.</p>
+        <p class="login-updated">Uppdaterades: 2026-05-05 22:49 CEST</p>
       </div>
     </div>
   </section>
@@ -99,7 +118,7 @@
         <div class="avatar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
-        <span class="header-name">Dr. Lindgren</span>
+        <span class="header-name" id="therapist-header-name">Dr. Lindgren</span>
       </div>
     </header>
 
@@ -423,7 +442,7 @@
         <div class="avatar patient">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
-        <span class="header-name">Maja</span>
+        <span class="header-name" id="client-header-name">Maja</span>
       </div>
     </header>
 

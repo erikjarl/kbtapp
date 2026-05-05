@@ -319,3 +319,46 @@
 ### Nästa steg
 - Ett naturligt nästa litet steg är att lägga till en tydlig markering som `behöver svar från terapeut` eller `återkoppling saknas` i samma lista
 - Alternativt låta snabbknappen kunna hoppa vidare direkt till nästa väntande inskick efter att ett inskick markerats som granskat eller fått återkoppling
+
+## 2026-05-05 — Enkel backend för konton, lösenord och persisterad login
+
+### Vad jag arbetade med
+- En avgränsad del: inloggningsflödet och den minsta riktiga backend som behövs för att terapeuter och patienter ska kunna skapa konto med lösenord och logga in igen
+- Målet var att ersätta de tidigare direkta demoingångarna med ett enkelt men verkligt auth-flöde som sparar användare mellan körningar
+
+### Vad jag ändrade
+- Lade till en liten lokal Node-server i `server.js` som både serverar frontendfilerna och exponerar auth-endpoints
+- Lade till filbaserad persistence i `data/auth-db.json` för användare och sessioner
+- Började hasha lösenord med `crypto.scryptSync` och lagra salt + hash i stället för klartext
+- Lade till endpoints för `register`, `login`, `session` och `logout`
+- Skapade `package.json` med enkelt startkommando för appen
+- Byggde om login-sidan så den nu har riktig rollväxling för `Terapeut`/`Patient` samt separata formulär för `Logga in` och `Skapa konto`
+- Kopplade frontend till backend via `fetch`, lokal tokenlagring och sessionsåterställning vid omladdning
+- Uppdaterade headernamn så inloggad användare faktiskt syns i respektive vy
+- Lade till `.gitignore` för lokal auth-databas så testkonton inte behöver checkas in
+- Skrev ett riktat Playwright-test `playwright-auth-check.js` och sparade screenshots i `qa-artifacts/auth-desktop-therapist.png` samt `qa-artifacts/auth-mobile-client.png`
+- Uppdaterade login-sidans synliga tidsstämpel enligt projektregeln
+
+### Vad som nu fungerar
+- Terapeut kan skapa konto med namn, e-post och lösenord
+- Patient kan skapa konto med namn, e-post och lösenord
+- Terapeut kan logga in på tidigare skapat konto
+- Patient kan logga in på tidigare skapat konto
+- Användare sparas lokalt i backendens JSON-fil mellan körningar
+- Lösenord lagras hashat i stället för i klartext
+- Aktiv session återställs efter omladdning så användaren kommer tillbaka till rätt vy
+- Logout rensar sessionen och visar login-vyn igen
+- Praktiskt test verifierade:
+  - desktop 1440×900: skapa terapeutkonto → öppna terapeutvy → logga ut → logga in igen med samma konto
+  - mobil 390×844: skapa patientkonto → öppna patientvy och verifiera namn i header
+  - `node --check script.js && node --check server.js` passerar
+
+### Vad som inte fungerar
+- Browser-verktyget gick fortfarande inte att använda eftersom Chrome-attach saknade fungerande debug-port; praktisk verifiering gjordes därför med lokal Playwright mot systemets Chrome
+- Endast auth och sessioner ligger nu i backend; övrig appdata (t.ex. meddelanden, tilldelningar, inskick och bibliotek) ligger fortfarande lokalt i frontendens `localStorage`
+- Det finns ännu ingen koppling mellan specifik inloggad användare och egen isolerad datamängd för uppgifter/material
+- Port `4173` var upptagen av en separat Python-server i denna miljö, så auth-versionen testades på lokal Node-server via port `4174`
+
+### Nästa steg
+- Rimlig nästa tydliga del är att flytta en enda central datamängd från `localStorage` till backend, helst `assigned/submissions` eller meddelandetrådar, så att ändrad behandlingsdata också persisteras server-side
+- När det görs bör datat kopplas till inloggad användare/roll i liten skala i stället för att införa stor ny arkitektur

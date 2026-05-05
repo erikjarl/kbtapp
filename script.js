@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const AUTH_STORAGE_KEY = 'kbtapp_auth_token';
   const today = new Date().toLocaleDateString('sv-SE', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
@@ -10,6 +11,56 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginView = document.getElementById('login-view');
   const therapistView = document.getElementById('therapist-view');
   const clientView = document.getElementById('client-view');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const authFeedback = document.getElementById('auth-feedback');
+  const therapistHeaderName = document.getElementById('therapist-header-name');
+  const clientHeaderName = document.getElementById('client-header-name');
+
+  const authState = {
+    role: 'therapist',
+    user: null
+  };
+
+  function getAuthToken() {
+    return localStorage.getItem(AUTH_STORAGE_KEY) || '';
+  }
+
+  function setAuthFeedback(message, tone = 'neutral') {
+    if (!authFeedback) return;
+    authFeedback.textContent = message;
+    authFeedback.dataset.tone = tone;
+  }
+
+  async function apiRequest(url, payload = {}, options = {}) {
+    const token = getAuthToken();
+    const response = await fetch(url, {
+      method: options.method || 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: options.method === 'GET' ? undefined : JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || 'Något gick fel.');
+    }
+    return data;
+  }
+
+  function syncRoleButtons() {
+    document.querySelectorAll('[data-auth-role]').forEach(button => {
+      button.classList.toggle('active', button.dataset.authRole === authState.role);
+    });
+  }
+
+  function applyUserToUi(user) {
+    authState.user = user;
+    authState.role = user.role;
+    if (therapistHeaderName) therapistHeaderName.textContent = user.role === 'therapist' ? user.name : 'Dr. Lindgren';
+    if (clientHeaderName) clientHeaderName.textContent = user.role === 'client' ? user.name.split(' ')[0] : 'Maja';
+  }
 
   function closeVisibleOverlays() {
     document.querySelectorAll('.overlay-modal.open').forEach(modal => {
@@ -21,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function openRole(role) {
     closeVisibleOverlays();
+    authState.role = role;
+    syncRoleButtons();
     loginView.classList.remove('active');
     therapistView.classList.remove('active');
     clientView.classList.remove('active');
@@ -28,22 +81,90 @@ document.addEventListener('DOMContentLoaded', () => {
     else clientView.classList.add('active');
   }
 
-  document.querySelectorAll('.login-role').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.preventDefault();
-      openRole(btn.dataset.role);
+  document.querySelectorAll('[data-auth-role]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      authState.role = btn.dataset.authRole || 'therapist';
+      syncRoleButtons();
+      setAuthFeedback(`Vald roll: ${authState.role === 'therapist' ? 'terapeut' : 'patient'}.`, 'neutral');
     });
   });
 
   document.querySelectorAll('.logout').forEach(item => {
-    item.addEventListener('click', e => {
+    item.addEventListener('click', async e => {
       e.preventDefault();
+      try {
+        await apiRequest('/api/auth/logout', {}, { method: 'POST' });
+      } catch (error) {
+        // ignored on logout
+      }
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      authState.user = null;
       closeVisibleOverlays();
       therapistView.classList.remove('active');
       clientView.classList.remove('active');
       loginView.classList.add('active');
+      setAuthFeedback('Du är utloggad.', 'success');
     });
   });
+
+  loginForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const formData = new FormData(loginForm);
+    setAuthFeedback('Loggar in…', 'neutral');
+    try {
+      const result = await apiRequest('/api/auth/login', {
+        email: formData.get('email'),
+        password: formData.get('password'),
+        role: authState.role
+      });
+      localStorage.setItem(AUTH_STORAGE_KEY, result.token);
+      applyUserToUi(result.user);
+      loginForm.reset();
+      setAuthFeedback(`Inloggad som ${result.user.name}.`, 'success');
+      openRole(result.user.role);
+    } catch (error) {
+      setAuthFeedback(error.message, 'error');
+    }
+  });
+
+  registerForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const formData = new FormData(registerForm);
+    setAuthFeedback('Skapar konto…', 'neutral');
+    try {
+      const result = await apiRequest('/api/auth/register', {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        password: formData.get('password'),
+        role: authState.role
+      });
+      localStorage.setItem(AUTH_STORAGE_KEY, result.token);
+      applyUserToUi(result.user);
+      registerForm.reset();
+      setAuthFeedback(`Konto skapat för ${result.user.name}.`, 'success');
+      openRole(result.user.role);
+    } catch (error) {
+      setAuthFeedback(error.message, 'error');
+    }
+  });
+
+  async function restoreSession() {
+    const token = getAuthToken();
+    if (!token) {
+      syncRoleButtons();
+      return;
+    }
+    try {
+      const result = await apiRequest('/api/auth/session', {}, { method: 'GET' });
+      applyUserToUi(result.user);
+      setAuthFeedback(`Välkommen tillbaka, ${result.user.name}.`, 'success');
+      openRole(result.user.role);
+    } catch (error) {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      setAuthFeedback('Tidigare session kunde inte återställas. Logga in igen.', 'error');
+      syncRoleButtons();
+    }
+  }
 
   function setupNav(viewElement) {
     const sideNav = viewElement.querySelector('.side-nav');
@@ -100,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   initMaterialBuilder();
+  restoreSession();
 });
 
 function initMaterialBuilder() {
