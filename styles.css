@@ -375,7 +375,13 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .assignment-form-card{background:#fffdfa;border:1px solid #e7e1d9;border-radius:26px;padding:18px;min-width:0}
 .assignment-input,.assignment-textarea,.assignment-table-input{width:100%;border:1px solid #d8d2ca;border-radius:12px;padding:12px;background:#fff;color:#1f1b18}
 .assignment-textarea{min-height:140px;resize:vertical}
+.assignment-feedback-box{display:grid;gap:8px;padding:16px 18px;border-radius:18px;background:linear-gradient(180deg,#eef6ef,#f9fcf8);border:1px solid #d6e8d7}
+.assignment-feedback-box strong{font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:#41664a}
+.assignment-feedback-box p{margin:0;color:#2f2b27;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+.assignment-feedback-meta{font-size:.82rem;color:#5f5852}
 .submission-answer-box{margin-top:10px;padding:14px 16px;border-radius:14px;background:#f8f4ee;border:1px solid #e7e1d9;color:#2f2b27;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+.submission-feedback-panel{display:grid;gap:10px;margin-top:16px;padding:16px;border-radius:20px;background:#fbf8f4;border:1px solid #e7e1d9}
+.submission-feedback-input{min-height:110px}
 .assignment-rating-row,.assignment-emoji-row{display:flex;flex-wrap:wrap;gap:10px}
 .assignment-rating-button,.assignment-emoji-button{border:1px solid #d9d3cc;background:#fff;border-radius:14px;padding:10px 12px;cursor:pointer;min-width:48px;transition:all .15s ease}
 .assignment-rating-button.active,.assignment-emoji-button.active{background:#1f1b18;color:#fff;border-color:#1f1b18;box-shadow:0 8px 18px rgba(31,27,24,0.14)}
@@ -464,6 +470,9 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
   .toast-area{left:16px;right:16px;bottom:76px}
   .toast{min-width:0}
   .assignment-stage{padding:14px}
+  .assignment-summary{grid-template-columns:1fr}
+  .modal-actions{display:grid;grid-template-columns:1fr;justify-content:stretch}
+  .modal-actions .builder-action{width:100%}
   .preview-shell.device-preview{max-width:100%;padding:66px 14px 18px;border-radius:32px}
   .preview-patient-head{flex-direction:column}
   .assignment-form-card{padding:14px}

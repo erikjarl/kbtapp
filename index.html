@@ -81,7 +81,7 @@
       </div>
       <div class="login-footnote">
         <p class="login-note">Detta är frontend-demovyer. Inga riktiga användarkonton eller patientdata används ännu.</p>
-        <p class="login-updated">Uppdaterades: 2026-05-04 22:11 CEST</p>
+        <p class="login-updated">Uppdaterades: 2026-05-05 10:46 CEST</p>
       </div>
     </div>
   </section>
@@ -594,7 +594,12 @@
         </button>
       </div>
       <div class="preview-shell assignment-shell" id="submission-shell"></div>
+      <div class="submission-feedback-panel">
+        <label class="composer-label" for="submission-feedback-input">Kort återkoppling till patienten</label>
+        <textarea id="submission-feedback-input" class="composer-textarea submission-feedback-input" placeholder="Skriv en kort, lugn och konkret återkoppling som patienten kan läsa efter att uppgiften granskats..."></textarea>
+      </div>
       <div class="modal-actions">
+        <button class="builder-action accent" type="button" id="send-submission-feedback">Spara återkoppling</button>
         <button class="builder-action accent-soft" type="button" id="mark-submission-reviewed">Markera som granskad</button>
         <button class="builder-action" type="button" data-close-modal="submission">Stäng</button>
       </div>

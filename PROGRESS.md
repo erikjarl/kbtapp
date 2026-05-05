@@ -159,3 +159,36 @@
 ### Nästa steg
 - Bygg nästa lilla del i samma område: enkel återkoppling från terapeut tillbaka till patient kopplad till ett inskick eller en uppgift
 - Alternativt lägg till filtrering/sortering i terapeutens inskicklista efter status för att göra uppföljning snabbare
+
+## 2026-05-05 — Enkel terapeutåterkoppling på inskickad hemuppgift
+
+### Vad jag arbetade med
+- En avgränsad del: återkoppling från terapeut tillbaka till patient efter att en hemuppgift skickats in
+- Målet var att göra statuskedjan mer komplett genom att låta terapeuten spara en kort kommentar som patienten sedan faktiskt kan läsa
+
+### Vad jag ändrade
+- Lade till ett enkelt återkopplingsfält i terapeutens granskningsmodal för inskickat material
+- Lade till knapp för att spara återkoppling direkt från granskningsläget
+- Började spara återkoppling lokalt på både inskicket och den tilldelade hemuppgiften, med tidsstämpel
+- Lät sparad återkoppling markera uppgiften som `granskad` om den ännu inte var det
+- Visar nu återkoppling i patientens hemuppgiftskort som en tydlig sammanfattningsruta
+- Visar även hela senaste återkopplingen inne i patientens formulär-/svarsvy
+- Nollställer tidigare återkoppling när patienten skickar in uppgiften igen, så att gammal kommentar inte ligger kvar på en ny version
+- Uppdaterade login-sidans synliga tidsstämpel enligt projektregeln
+
+### Vad som nu fungerar
+- Det finns nu ett första verkligt återkopplingsflöde från terapeut till patient i samma mockade datamodell
+- Patientkortet visar när återkoppling finns istället för att bara visa status
+- Patienten kan öppna uppgiften och läsa den senaste terapeutkommentaren i ett eget återkopplingsblock
+- Ny inskickning rensar gammal återkoppling så nästa granskning blir tydligare
+- `script.js` passerar syntaxkontroll via `node --check`
+
+### Vad som inte fungerar
+- Praktisk browserverifiering blev bara delvis klar denna körning: patientflödet gick att köra praktiskt, men terapeutens inskickskort betedde sig märkligt i Playwright och renderade åtgärdsknappen med noll storlek i dashboard-vyn trots att kortets HTML fanns på plats
+- Browser-testet visade också tecken på att en tidigare förhandsvisningsmodal kunde ligga kvar och störa interaktioner i samma testrunda
+- Flödet är fortfarande helt lokalt/mockat i `localStorage` utan riktig backend, autentisering eller synk mellan enheter
+
+### Nästa steg
+- Felsök varför åtgärdsknappen i terapeutens inskickskort ibland inte blir praktiskt klickbar/visuell i dashboard-vyn
+- När det sitter: kör ett rent end-to-end-varv där terapeuten öppnar inskick, skriver återkoppling och patienten läser den på både desktop och mobil
+- Därefter är ett rimligt nästa litet steg filtrering/sortering av inskick efter status eller en mer strukturerad återkopplingsvy

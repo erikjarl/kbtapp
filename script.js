@@ -158,6 +158,8 @@ function initMaterialBuilder() {
     submissionModal: document.getElementById('submission-modal'),
     submissionShell: document.getElementById('submission-shell'),
     submissionModalTitle: document.getElementById('submission-modal-title'),
+    submissionFeedbackInput: document.getElementById('submission-feedback-input'),
+    sendSubmissionFeedback: document.getElementById('send-submission-feedback'),
     markSubmissionReviewed: document.getElementById('mark-submission-reviewed'),
     toastArea: document.getElementById('toast-area'),
     therapistThreadList: document.getElementById('therapist-thread-list'),
@@ -256,6 +258,9 @@ function initMaterialBuilder() {
     });
     els.markSubmissionReviewed?.addEventListener('click', () => {
       if (state.activeSubmissionId) markSubmissionReviewed(state.activeSubmissionId);
+    });
+    els.sendSubmissionFeedback?.addEventListener('click', () => {
+      if (state.activeSubmissionId) saveSubmissionFeedback(state.activeSubmissionId);
     });
   }
 
@@ -1048,9 +1053,10 @@ function initMaterialBuilder() {
       const actionLabel = item.status === 'tilldelad' ? 'Öppna formulär' : item.status === 'påbörjad' ? 'Fortsätt fylla i' : 'Öppna svar';
       const submitLabel = item.status === 'inskickad' || item.status === 'granskad' ? 'Skicka in igen' : 'Skicka in till terapeut';
       const reviewedMeta = item.reviewedAt ? ` · granskad ${escapeHtml(item.reviewedAt)}` : '';
+      const feedbackBox = item.feedback?.text ? `<div class="assignment-feedback-box"><strong>Återkoppling från behandlaren</strong><p>${escapeHtml(compactText(item.feedback.text, 180))}</p><span class="assignment-feedback-meta">${escapeHtml(item.feedback.updatedAt || item.reviewedAt || 'Nyligen skickad')}</span></div>` : '';
       const card = document.createElement('div');
       card.className = 'card library-card';
-      card.innerHTML = `<div class="library-card-head"><div><span class="library-card-type">Hemuppgift</span><h3>${escapeHtml(item.title)}</h3></div><span class="status-pill status-${escapeAttribute(item.status)}">${escapeHtml(item.status)}</span></div><p>Status: ${escapeHtml(item.status)} · tilldelad ${escapeHtml(item.createdAt)}${reviewedMeta}</p><div class="library-card-meta"><span>${item.blocks.length} block</span><span>${escapeHtml(item.patientName)}</span></div><div class="builder-toolbar"><button class="builder-action" type="button">${actionLabel}</button><button class="builder-action accent" type="button">${submitLabel}</button></div>`;
+      card.innerHTML = `<div class="library-card-head"><div><span class="library-card-type">Hemuppgift</span><h3>${escapeHtml(item.title)}</h3></div><span class="status-pill status-${escapeAttribute(item.status)}">${escapeHtml(item.status)}</span></div><p>Status: ${escapeHtml(item.status)} · tilldelad ${escapeHtml(item.createdAt)}${reviewedMeta}</p><div class="library-card-meta"><span>${item.blocks.length} block</span><span>${escapeHtml(item.patientName)}</span></div>${feedbackBox}<div class="builder-toolbar"><button class="builder-action" type="button">${actionLabel}</button><button class="builder-action accent" type="button">${submitLabel}</button></div>`;
       const [openBtn, submitBtn] = card.querySelectorAll('button');
       openBtn.addEventListener('click', () => openAssignment(item.id));
       submitBtn.addEventListener('click', () => submitAssignment(item.id));
@@ -1073,7 +1079,7 @@ function initMaterialBuilder() {
 
     const stage = document.createElement('section');
     stage.className = 'assignment-stage';
-    stage.innerHTML = `<div><span class="section-kicker">Patientläge</span><h4>${escapeHtml(item.title)}</h4><p>Fyll i formuläret nedan som patient. Detta läge är gjort för att kännas lugnare, mer fokuserat och tydligt steg för steg.</p></div><div class="assignment-summary"><div><strong>Status</strong><span>${escapeHtml(item.status)}</span></div><div><strong>Patient</strong><span>${escapeHtml(item.patientName)}</span></div><div><strong>Block</strong><span>${item.blocks.length} st</span></div></div>`;
+    stage.innerHTML = `<div><span class="section-kicker">Patientläge</span><h4>${escapeHtml(item.title)}</h4><p>Fyll i formuläret nedan som patient. Detta läge är gjort för att kännas lugnare, mer fokuserat och tydligt steg för steg.</p></div><div class="assignment-summary"><div><strong>Status</strong><span>${escapeHtml(item.status)}</span></div><div><strong>Patient</strong><span>${escapeHtml(item.patientName)}</span></div><div><strong>Block</strong><span>${item.blocks.length} st</span></div>${item.feedback?.text ? `<div><strong>Återkoppling</strong><span>Ny kommentar från behandlaren</span></div>` : ''}</div>${item.feedback?.text ? `<div class="assignment-feedback-box"><strong>Senaste återkopplingen</strong><p>${escapeHtml(item.feedback.text)}</p><span class="assignment-feedback-meta">${escapeHtml(item.feedback.updatedAt || item.reviewedAt || 'Nyligen skickad')}</span></div>` : ''}`;
     els.assignmentShell.appendChild(stage);
 
     item.blocks.forEach((block, index) => {
@@ -1246,6 +1252,7 @@ function initMaterialBuilder() {
     if (!item) return;
     item.status = 'inskickad';
     item.reviewedAt = '';
+    item.feedback = null;
     localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
 
     const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
@@ -1261,6 +1268,7 @@ function initMaterialBuilder() {
       submittedAt: new Date().toLocaleString('sv-SE'),
       status: 'inskickad',
       reviewedAt: '',
+      feedback: null,
       blocks: structuredClone(item.blocks),
       answers: answersSnapshot,
       summary
@@ -1317,12 +1325,15 @@ function initMaterialBuilder() {
       els.markSubmissionReviewed.disabled = item.status === 'granskad';
       els.markSubmissionReviewed.textContent = item.status === 'granskad' ? 'Redan granskad' : 'Markera som granskad';
     }
+    if (els.submissionFeedbackInput) {
+      els.submissionFeedbackInput.value = item.feedback?.text || '';
+    }
     if (els.submissionModalTitle) els.submissionModalTitle.textContent = item.title;
     els.submissionShell.innerHTML = '';
 
     const stage = document.createElement('section');
     stage.className = 'assignment-stage';
-    stage.innerHTML = `<div><span class="section-kicker">Inskickad av patient</span><h4>${escapeHtml(item.title)}</h4><p>Här kan terapeuten granska vad patienten faktiskt skickade in, block för block, utan att lämna gränssnittet.</p></div><div class="assignment-summary"><div><strong>Patient</strong><span>${escapeHtml(item.patientName)}</span></div><div><strong>Status</strong><span>${escapeHtml(item.status || 'inskickad')}</span></div><div><strong>Inskickad</strong><span>${escapeHtml(item.submittedAt)}</span></div><div><strong>Svar</strong><span>${item.summary?.answeredCount || 0} ifyllda delar</span></div>${item.reviewedAt ? `<div><strong>Granskad</strong><span>${escapeHtml(item.reviewedAt)}</span></div>` : ''}</div>`;
+    stage.innerHTML = `<div><span class="section-kicker">Inskickad av patient</span><h4>${escapeHtml(item.title)}</h4><p>Här kan terapeuten granska vad patienten faktiskt skickade in, block för block, utan att lämna gränssnittet.</p></div><div class="assignment-summary"><div><strong>Patient</strong><span>${escapeHtml(item.patientName)}</span></div><div><strong>Status</strong><span>${escapeHtml(item.status || 'inskickad')}</span></div><div><strong>Inskickad</strong><span>${escapeHtml(item.submittedAt)}</span></div><div><strong>Svar</strong><span>${item.summary?.answeredCount || 0} ifyllda delar</span></div>${item.reviewedAt ? `<div><strong>Granskad</strong><span>${escapeHtml(item.reviewedAt)}</span></div>` : ''}</div>${item.feedback?.text ? `<div class="assignment-feedback-box"><strong>Senast sparad återkoppling</strong><p>${escapeHtml(item.feedback.text)}</p><span class="assignment-feedback-meta">${escapeHtml(item.feedback.updatedAt || item.reviewedAt || 'Nyligen sparad')}</span></div>` : ''}`;
     els.submissionShell.appendChild(stage);
 
     item.blocks.forEach((block, index) => {
@@ -1356,6 +1367,37 @@ function initMaterialBuilder() {
     renderSavedCollections();
     openSubmission(submissionId);
     showToast('Markerad som granskad', `${item.title} är nu markerad som granskad.`);
+  }
+
+  function saveSubmissionFeedback(submissionId) {
+    const text = els.submissionFeedbackInput?.value.trim();
+    if (!text) {
+      showToast('Ingen återkoppling sparad', 'Skriv minst en kort kommentar först.');
+      return;
+    }
+
+    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    const item = submissions.find(entry => entry.id === submissionId);
+    if (!item) return;
+
+    const updatedAt = new Date().toLocaleString('sv-SE');
+    item.feedback = { text, updatedAt };
+    item.status = 'granskad';
+    item.reviewedAt = item.reviewedAt || updatedAt;
+    localStorage.setItem(STORAGE_KEYS.submissions, JSON.stringify(submissions));
+
+    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+    const assignment = assigned.find(entry => entry.id === item.assignmentId);
+    if (assignment) {
+      assignment.status = 'granskad';
+      assignment.reviewedAt = item.reviewedAt;
+      assignment.feedback = { text, updatedAt };
+      localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
+    }
+
+    renderSavedCollections();
+    openSubmission(submissionId);
+    showToast('Återkoppling sparad', 'Patienten kan nu se din kommentar i sin uppgift.');
   }
 
   function renderSubmissionBlock(block, answers, blockIndex) {
