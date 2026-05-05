@@ -222,3 +222,35 @@
 ### Nästa steg
 - Kör ett rent end-to-end-varv för terapeutåterkoppling där samma testrunda även öppnar/stänger fler modaler mellan stegen, för att bekräfta att flödet känns stabilt även under mer blandad användning
 - Därefter är ett bra nästa lilla steg att lägga till filtrering av inskick efter status i terapeutens lista, så uppföljning blir snabbare
+
+## 2026-05-05 — Filtrering av inskick efter status i terapeutvyn
+
+### Vad jag arbetade med
+- En avgränsad del: terapeutens lista `Inskickat patientmaterial`
+- Målet var att göra uppföljningen snabbare genom att kunna växla mellan alla inskick, bara nya `inskickade` och redan `granskade`
+
+### Vad jag ändrade
+- Lade till en liten filterrad ovanför terapeutens inskicklista med valen `Alla`, `Inskickade` och `Granskade`
+- Kopplade filtren till lokal renderingslogik i frontend så listan uppdateras direkt utan ny arkitektur eller backend
+- Lade till räknare i filterknapparna så terapeuten ser hur många objekt som finns i varje läge
+- Lade till tomt läge för filter utan träffar, så vyn fortfarande känns tydlig när exempelvis inga granskade inskick finns
+- Lade till enkel styling för filterchips så de fungerar på både desktop och mobil
+- Skrev ett riktat Playwright-test för filterdelen och sparade nya QA-skärmdumpar i `qa-artifacts/`
+
+### Vad som nu fungerar
+- Terapeuten kan nu filtrera inskicklistan mellan alla, endast `inskickad` och endast `granskad`
+- Filterknapparna visar aktuella antal per status
+- Om ett filter saknar träffar visas ett begripligt tomt tillstånd i stället för en trasig eller förvirrande lista
+- Praktiskt test verifierade:
+  - desktop 1440×900: 2 seedade inskick visades i `Alla`, `Inskickade` visade bara `Exponeringslogg`, `Granskade` visade bara `Sömnlogg vecka 1`
+  - mobil 390×844: `Granskade` visade korrekt endast `Sömnlogg vecka 1`
+- `script.js` passerar fortsatt `node --check`
+
+### Vad som inte fungerar
+- Browser-verktyget gick fortfarande inte att använda eftersom host-attach mot Chrome timeoutade och sandbox-browser saknas i denna miljö
+- Flödet är fortfarande helt lokalt/mockat i `localStorage` utan riktig backend, autentisering eller synk mellan enheter
+- Filtreringen omfattar ännu bara två statuslägen i terapeutens inskicklista; det finns ännu ingen sortering på datum/patient eller kombinerade filter
+
+### Nästa steg
+- Ett bra nästa litet steg är att lägga till enkel sortering eller snabbfokus på `senast inkommet` respektive `behöver granskas`
+- Alternativt gå tillbaka till återkopplingsflödet och köra ett mer blandat end-to-end-varv där modaler, filtrering och patientvisning används i samma session

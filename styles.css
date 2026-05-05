@@ -381,6 +381,10 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .assignment-feedback-box p{margin:0;color:#2f2b27;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
 .assignment-feedback-meta{font-size:.82rem;color:#5f5852}
 .submission-answer-box{margin-top:10px;padding:14px 16px;border-radius:14px;background:#f8f4ee;border:1px solid #e7e1d9;color:#2f2b27;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+.submission-filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 16px}
+.submission-filter-chip{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;border:1px solid #ddd4c9;background:#fffdfa;color:#5a534d;font-size:.84rem;font-weight:700;cursor:pointer;transition:all .15s ease}
+.submission-filter-chip:hover{border-color:#cdbda8;background:#fff7ef}
+.submission-filter-chip.is-active{background:#1f1b18;border-color:#1f1b18;color:#f8f4ee;box-shadow:0 10px 22px rgba(31,27,24,.12)}
 .submission-feedback-panel{display:grid;gap:10px;margin-top:16px;padding:16px;border-radius:20px;background:#fbf8f4;border:1px solid #e7e1d9}
 .submission-feedback-input{min-height:110px}
 .assignment-rating-row,.assignment-emoji-row{display:flex;flex-wrap:wrap;gap:10px}

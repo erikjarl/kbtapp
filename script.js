@@ -139,7 +139,8 @@ function initMaterialBuilder() {
     activeClientPatientId: patients[0].id,
     activeAssignmentId: null,
     activeSubmissionId: null,
-    activeTherapistThreadPatientId: patients[0].id
+    activeTherapistThreadPatientId: patients[0].id,
+    submissionFilter: 'alla'
   };
 
   const collapsedTypes = new Set(['rating', 'textfield', 'table', 'emoji', 'info']);
@@ -222,6 +223,7 @@ function initMaterialBuilder() {
   bindToolbar();
   bindModals();
   bindMessaging();
+  bindSubmissionFilters();
   renderSavedCollections();
   render();
 
@@ -1298,12 +1300,19 @@ function initMaterialBuilder() {
   function renderTherapistSubmissions() {
     if (!els.therapistSubmissionsGrid) return;
     const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    const activeFilter = state.submissionFilter || 'alla';
+    const filteredSubmissions = submissions.filter(item => activeFilter === 'alla' ? true : (item.status || 'inskickad') === activeFilter);
+    syncSubmissionFilterButtons(submissions);
     els.therapistSubmissionsGrid.innerHTML = '';
     if (!submissions.length) {
       els.therapistSubmissionsGrid.innerHTML = '<div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Väntar</span><h3>Inga inskick ännu</h3></div></div><p>När patienten skickar in material visas det här i en tydlig lista för snabb uppföljning.</p><div class="library-card-meta"><span>Redo för uppföljning</span><span>Visas i terapeutvyn</span></div></div>';
       return;
     }
-    submissions.forEach(item => {
+    if (!filteredSubmissions.length) {
+      els.therapistSubmissionsGrid.innerHTML = `<div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Filter</span><h3>Inga ${escapeHtml(activeFilter)} inskick just nu</h3></div></div><p>Byt filter för att se andra inskick eller fortsätt när nya svar kommer in.</p><div class="library-card-meta"><span>${submissions.length} totalt</span><span>Snabb uppföljning</span></div></div>`;
+      return;
+    }
+    filteredSubmissions.forEach(item => {
       const card = createLibraryCard({
         title: item.title,
         description: `${item.patientName} · inskickad ${item.submittedAt} · ${item.blocks.length} block`,
@@ -1326,6 +1335,31 @@ function initMaterialBuilder() {
         document.querySelector('#therapist-view .nav-item[data-page="messages"]')?.click();
       });
       els.therapistSubmissionsGrid.appendChild(card);
+    });
+  }
+
+  function bindSubmissionFilters() {
+    document.querySelectorAll('[data-submission-filter]').forEach(button => {
+      button.addEventListener('click', () => {
+        state.submissionFilter = button.dataset.submissionFilter || 'alla';
+        renderTherapistSubmissions();
+      });
+    });
+  }
+
+  function syncSubmissionFilterButtons(submissions = []) {
+    const counts = submissions.reduce((acc, item) => {
+      const status = item.status || 'inskickad';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, { alla: submissions.length });
+
+    document.querySelectorAll('[data-submission-filter]').forEach(button => {
+      const filter = button.dataset.submissionFilter || 'alla';
+      const count = counts[filter] || 0;
+      const baseLabel = filter === 'alla' ? 'Alla' : filter === 'inskickad' ? 'Inskickade' : 'Granskade';
+      button.classList.toggle('is-active', filter === (state.submissionFilter || 'alla'));
+      button.textContent = `${baseLabel} (${count})`;
     });
   }
 
