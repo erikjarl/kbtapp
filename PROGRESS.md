@@ -320,6 +320,43 @@
 - Ett naturligt nästa litet steg är att lägga till en tydlig markering som `behöver svar från terapeut` eller `återkoppling saknas` i samma lista
 - Alternativt låta snabbknappen kunna hoppa vidare direkt till nästa väntande inskick efter att ett inskick markerats som granskat eller fått återkoppling
 
+## 2026-05-06 — Serverpersistens för tilldelade hemuppgifter och inskick
+
+### Vad jag arbetade med
+- En avgränsad del: kedjan `tilldelade hemuppgifter → patientens inskick → terapeutens granskning/återkoppling`
+- Målet var att flytta just denna centrala behandlingsdata från frontendens `localStorage` till den enkla backend som redan införts för auth
+
+### Vad jag ändrade
+- Utökade `server.js` så auth-databasen nu även kan lagra `assigned` och `submissions`
+- Lade till två auth-skyddade API-ytor:
+  - `GET/PUT /api/data/assigned`
+  - `GET/PUT /api/data/submissions`
+- Lade till frontendcache i `script.js` för serverladdad behandlingsdata
+- Bytte hemuppgiftsflödet så tilldelning, påbörjade svar, inskick, granskning och återkoppling nu läser/skriver mot servern i stället för direkt till `localStorage`
+- Lade till enkel engångsmigrering: om äldre lokal data finns och servern är tom laddas den upp första gången efter inloggning
+- Lade till en riktad Playwright-kontroll `playwright-backend-persistence-check.js`
+- Sparade nya QA-skärmdumpar i `qa-artifacts/backend-persistence-desktop.png` och `qa-artifacts/backend-persistence-mobile.png`
+
+### Vad som nu fungerar
+- Tilldelade hemuppgifter sparas nu i backendens JSON-fil och överlever omladdning
+- Patientens inskickade svar sparas nu i backendens JSON-fil och överlever omladdning
+- Terapeuten kan efter omladdning fortfarande se patientens inskick och öppna granskningsläget
+- Terapeutens återkoppling i inskicksvyn sparas fortsatt och visas efter serverpersistensflödet
+- Praktiskt test verifierade:
+  - desktop 1440×900: registrera terapeut → skapa material → tilldela patient → ladda om → öppna terapeutens inskick efter patientens svar
+  - mobil 390×844: registrera patient → öppna tilldelad uppgift → fyll i svar → skicka in → ladda om → status `inskickad` finns kvar
+  - därefter kunde terapeuten efter egen omladdning öppna samma inskick och spara återkoppling
+- `node --check server.js && node --check script.js` passerar
+
+### Vad som inte fungerar
+- Behandlingsdatan är ännu inte isolerad per verklig inloggad patient/terapeutrelation; den är nu serverpersistad men fortfarande knuten till appens nuvarande mockade patientlista och gemensamma arbetsyta
+- Meddelandetrådar, materialbibliotek och mallbibliotek ligger fortfarande lokalt i frontendens `localStorage`
+- Browser-verktyget användes inte heller denna körning; praktisk verifiering gjordes med lokal Playwright mot Node-server på port `4175`
+
+### Nästa steg
+- Rimlig nästa tydliga del är att knyta den serverpersistade hemuppgiftsdatan tydligare till inloggad användare/roll i liten skala, så att patientens vy inte längre bygger på en fast mockad patientidentitet
+- Alternativt flytta nästa centrala datamängd till backend, helst meddelandetrådar mellan terapeut och patient
+
 ## 2026-05-05 — Enkel backend för konton, lösenord och persisterad login
 
 ### Vad jag arbetade med

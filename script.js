@@ -104,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
       clientView.classList.remove('active');
       loginView.classList.add('active');
       setAuthFeedback('Du är utloggad.', 'success');
+      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: false } }));
     });
   });
 
@@ -122,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loginForm.reset();
       setAuthFeedback(`Inloggad som ${result.user.name}.`, 'success');
       openRole(result.user.role);
+      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role } }));
     } catch (error) {
       setAuthFeedback(error.message, 'error');
     }
@@ -143,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
       registerForm.reset();
       setAuthFeedback(`Konto skapat för ${result.user.name}.`, 'success');
       openRole(result.user.role);
+      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role } }));
     } catch (error) {
       setAuthFeedback(error.message, 'error');
     }
@@ -159,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
       applyUserToUi(result.user);
       setAuthFeedback(`Välkommen tillbaka, ${result.user.name}.`, 'success');
       openRole(result.user.role);
+      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role, restored: true } }));
     } catch (error) {
       localStorage.removeItem(AUTH_STORAGE_KEY);
       setAuthFeedback('Tidigare session kunde inte återställas. Logga in igen.', 'error');
@@ -226,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initMaterialBuilder() {
   const STORAGE_KEYS = {
+    auth: 'kbtapp_auth_token',
     templates: 'kbtapp_templates',
     library: 'kbtapp_material_library',
     assigned: 'kbtapp_assigned_materials',
@@ -263,7 +268,10 @@ function initMaterialBuilder() {
     activeSubmissionId: null,
     activeTherapistThreadPatientId: patients[0].id,
     submissionFilter: 'alla',
-    submissionSort: 'needs-review'
+    submissionSort: 'needs-review',
+    serverAssigned: [],
+    serverSubmissions: [],
+    serverDataLoaded: false
   };
 
   const collapsedTypes = new Set(['rating', 'textfield', 'table', 'emoji', 'info']);
@@ -350,8 +358,93 @@ function initMaterialBuilder() {
   bindModals();
   bindMessaging();
   bindSubmissionFilters();
-  renderSavedCollections();
-  render();
+  loadServerCollections().finally(() => {
+    renderSavedCollections();
+    render();
+  });
+
+  function getAuthToken() {
+    return localStorage.getItem(STORAGE_KEYS.auth) || '';
+  }
+
+  async function serverDataRequest(url, payload = {}, method = 'GET') {
+    const token = getAuthToken();
+    if (!token) throw new Error('Ingen aktiv session.');
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: method === 'GET' ? undefined : JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Kunde inte spara data.');
+    return data;
+  }
+
+  function getAssignedItems() {
+    return state.serverAssigned;
+  }
+
+  function getSubmissionItems() {
+    return state.serverSubmissions;
+  }
+
+  async function saveAssignedItems(items) {
+    state.serverAssigned = items;
+    if (!getAuthToken()) return items;
+    const result = await serverDataRequest('/api/data/assigned', { items }, 'PUT');
+    state.serverAssigned = Array.isArray(result.items) ? result.items : items;
+    return state.serverAssigned;
+  }
+
+  async function saveSubmissionItems(items) {
+    state.serverSubmissions = items;
+    if (!getAuthToken()) return items;
+    const result = await serverDataRequest('/api/data/submissions', { items }, 'PUT');
+    state.serverSubmissions = Array.isArray(result.items) ? result.items : items;
+    return state.serverSubmissions;
+  }
+
+  async function loadServerCollections() {
+    if (!getAuthToken()) return;
+    try {
+      const [assignedResult, submissionsResult] = await Promise.all([
+        serverDataRequest('/api/data/assigned'),
+        serverDataRequest('/api/data/submissions')
+      ]);
+
+      const assignedItems = Array.isArray(assignedResult.items) ? assignedResult.items : [];
+      const submissionItems = Array.isArray(submissionsResult.items) ? submissionsResult.items : [];
+      const legacyAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+      const legacySubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+
+      state.serverAssigned = assignedItems.length ? assignedItems : legacyAssigned;
+      state.serverSubmissions = submissionItems.length ? submissionItems : legacySubmissions;
+
+      if (!assignedItems.length && legacyAssigned.length) await saveAssignedItems(state.serverAssigned);
+      if (!submissionItems.length && legacySubmissions.length) await saveSubmissionItems(state.serverSubmissions);
+
+      localStorage.removeItem(STORAGE_KEYS.assigned);
+      localStorage.removeItem(STORAGE_KEYS.submissions);
+      state.serverDataLoaded = true;
+    } catch (error) {
+      console.warn('Kunde inte läsa behandlingsdata från servern:', error);
+      state.serverAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+      state.serverSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    }
+  }
+
+  document.addEventListener('kbtapp:auth-changed', async event => {
+    if (event.detail?.loggedIn) {
+      await loadServerCollections();
+    } else {
+      state.serverAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+      state.serverSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    }
+    renderSavedCollections();
+  });
 
   function bindPanelLibrary() {
     els.library.querySelectorAll('.library-block').forEach(item => {
@@ -1130,7 +1223,7 @@ function initMaterialBuilder() {
     openModal(els.previewModal);
   }
 
-  function assignPatient() {
+  async function assignPatient() {
     state.assignedPatientId = els.patientSelect.value;
     state.activeClientPatientId = state.assignedPatientId;
     const patient = patients.find(item => item.id === state.assignedPatientId);
@@ -1145,9 +1238,9 @@ function initMaterialBuilder() {
       reviewedAt: '',
       blocks: structuredClone(state.blocks)
     };
-    const current = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+    const current = [...getAssignedItems()];
     current.unshift(assignedEntry);
-    localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(current));
+    await saveAssignedItems(current);
     renderSavedCollections();
     showToast('Material tilldelat', `${title} skickades till ${patient.name}.`);
     closeModal(els.assignModal);
@@ -1184,7 +1277,7 @@ function initMaterialBuilder() {
   }
 
   function renderClientAssignments() {
-    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]').filter(item => item.patientId === state.activeClientPatientId);
+    const assigned = getAssignedItems().filter(item => item.patientId === state.activeClientPatientId);
     if (!els.clientAssignmentsGrid) return;
     els.clientAssignmentsGrid.innerHTML = '';
     if (!assigned.length) {
@@ -1206,13 +1299,13 @@ function initMaterialBuilder() {
     });
   }
 
-  function openAssignment(assignmentId) {
-    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+  async function openAssignment(assignmentId) {
+    const assigned = [...getAssignedItems()];
     const item = assigned.find(entry => entry.id === assignmentId);
     if (!item || !els.assignmentShell) return;
     if (item.status === 'tilldelad') {
       item.status = 'påbörjad';
-      localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
+      await saveAssignedItems(assigned);
       renderSavedCollections();
     }
     state.activeAssignmentId = assignmentId;
@@ -1367,14 +1460,14 @@ function initMaterialBuilder() {
     return wrap;
   }
 
-  function updateAssignmentAnswer(assignmentId, blockId, patch) {
-    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+  async function updateAssignmentAnswer(assignmentId, blockId, patch) {
+    const assigned = [...getAssignedItems()];
     const item = assigned.find(entry => entry.id === assignmentId);
     if (!item) return;
     item.answers = item.answers || {};
     item.answers[blockId] = { ...(item.answers[blockId] || {}), ...patch };
     if (item.status === 'tilldelad') item.status = 'påbörjad';
-    localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
+    await saveAssignedItems(assigned);
     renderSavedCollections();
   }
 
@@ -1382,22 +1475,22 @@ function initMaterialBuilder() {
     if (!els.clientMaterialsGrid) return;
     els.clientMaterialsGrid.innerHTML = '';
     clientMaterialSeed.forEach(item => els.clientMaterialsGrid.appendChild(createLibraryCard(item.title, item.description)));
-    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]').filter(item => item.patientId === state.activeClientPatientId);
+    const assigned = getAssignedItems().filter(item => item.patientId === state.activeClientPatientId);
     assigned.forEach(item => {
       els.clientMaterialsGrid.appendChild(createLibraryCard(item.title, `${item.patientName} · ${item.blocks.length} block · status ${item.status}`));
     });
   }
 
-  function submitAssignment(assignmentId) {
-    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+  async function submitAssignment(assignmentId) {
+    const assigned = [...getAssignedItems()];
     const item = assigned.find(entry => entry.id === assignmentId);
     if (!item) return;
     item.status = 'inskickad';
     item.reviewedAt = '';
     item.feedback = null;
-    localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
+    await saveAssignedItems(assigned);
 
-    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    const submissions = [...getSubmissionItems()];
     const answersSnapshot = structuredClone(item.answers || {});
     const summary = buildSubmissionSummary(item.blocks, answersSnapshot);
     const existingIndex = submissions.findIndex(entry => entry.assignmentId === item.id);
@@ -1418,14 +1511,14 @@ function initMaterialBuilder() {
 
     if (existingIndex >= 0) submissions.splice(existingIndex, 1);
     submissions.unshift(submissionEntry);
-    localStorage.setItem(STORAGE_KEYS.submissions, JSON.stringify(submissions));
+    await saveSubmissionItems(submissions);
     renderSavedCollections();
     showToast('Inskickat', `${item.title} skickades in av ${item.patientName}.`);
   }
 
   function renderTherapistSubmissions() {
     if (!els.therapistSubmissionsGrid) return;
-    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    const submissions = getSubmissionItems();
     const activeFilter = state.submissionFilter || 'alla';
     const filteredSubmissions = submissions
       .filter(item => activeFilter === 'alla' ? true : (item.status || 'inskickad') === activeFilter)
@@ -1571,7 +1664,7 @@ function initMaterialBuilder() {
   }
 
   function openNextPendingSubmission() {
-    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    const submissions = getSubmissionItems();
     const nextPending = submissions
       .filter(item => (item.status || 'inskickad') === 'inskickad')
       .sort(compareSubmissions)[0];
@@ -1586,7 +1679,7 @@ function initMaterialBuilder() {
   }
 
   function openSubmission(submissionId) {
-    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    const submissions = getSubmissionItems();
     const item = submissions.find(entry => entry.id === submissionId);
     if (!item || !els.submissionShell) return;
     state.activeSubmissionId = submissionId;
@@ -1616,22 +1709,22 @@ function initMaterialBuilder() {
     openModal(els.submissionModal);
   }
 
-  function markSubmissionReviewed(submissionId) {
-    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+  async function markSubmissionReviewed(submissionId) {
+    const submissions = [...getSubmissionItems()];
     const item = submissions.find(entry => entry.id === submissionId);
     if (!item) return;
 
     const reviewedAt = new Date().toLocaleString('sv-SE');
     item.status = 'granskad';
     item.reviewedAt = reviewedAt;
-    localStorage.setItem(STORAGE_KEYS.submissions, JSON.stringify(submissions));
+    await saveSubmissionItems(submissions);
 
-    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+    const assigned = [...getAssignedItems()];
     const assignment = assigned.find(entry => entry.id === item.assignmentId);
     if (assignment) {
       assignment.status = 'granskad';
       assignment.reviewedAt = reviewedAt;
-      localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
+      await saveAssignedItems(assigned);
     }
 
     renderSavedCollections();
@@ -1639,14 +1732,14 @@ function initMaterialBuilder() {
     showToast('Markerad som granskad', `${item.title} är nu markerad som granskad.`);
   }
 
-  function saveSubmissionFeedback(submissionId) {
+  async function saveSubmissionFeedback(submissionId) {
     const text = els.submissionFeedbackInput?.value.trim();
     if (!text) {
       showToast('Ingen återkoppling sparad', 'Skriv minst en kort kommentar först.');
       return;
     }
 
-    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    const submissions = [...getSubmissionItems()];
     const item = submissions.find(entry => entry.id === submissionId);
     if (!item) return;
 
@@ -1654,15 +1747,15 @@ function initMaterialBuilder() {
     item.feedback = { text, updatedAt };
     item.status = 'granskad';
     item.reviewedAt = item.reviewedAt || updatedAt;
-    localStorage.setItem(STORAGE_KEYS.submissions, JSON.stringify(submissions));
+    await saveSubmissionItems(submissions);
 
-    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+    const assigned = [...getAssignedItems()];
     const assignment = assigned.find(entry => entry.id === item.assignmentId);
     if (assignment) {
       assignment.status = 'granskad';
       assignment.reviewedAt = item.reviewedAt;
       assignment.feedback = { text, updatedAt };
-      localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
+      await saveAssignedItems(assigned);
     }
 
     renderSavedCollections();
