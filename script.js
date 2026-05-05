@@ -127,6 +127,7 @@ function initMaterialBuilder() {
     assignedPatientId: patients[0].id,
     activeClientPatientId: patients[0].id,
     activeAssignmentId: null,
+    activeSubmissionId: null,
     activeTherapistThreadPatientId: patients[0].id
   };
 
@@ -157,6 +158,7 @@ function initMaterialBuilder() {
     submissionModal: document.getElementById('submission-modal'),
     submissionShell: document.getElementById('submission-shell'),
     submissionModalTitle: document.getElementById('submission-modal-title'),
+    markSubmissionReviewed: document.getElementById('mark-submission-reviewed'),
     toastArea: document.getElementById('toast-area'),
     therapistThreadList: document.getElementById('therapist-thread-list'),
     therapistMessageList: document.getElementById('therapist-message-list'),
@@ -251,6 +253,9 @@ function initMaterialBuilder() {
     els.submitAssignmentModal?.addEventListener('click', () => {
       if (state.activeAssignmentId) submitAssignment(state.activeAssignmentId);
       closeModal(els.assignmentModal);
+    });
+    els.markSubmissionReviewed?.addEventListener('click', () => {
+      if (state.activeSubmissionId) markSubmissionReviewed(state.activeSubmissionId);
     });
   }
 
@@ -990,6 +995,7 @@ function initMaterialBuilder() {
       title,
       createdAt: new Date().toLocaleString('sv-SE'),
       status: 'tilldelad',
+      reviewedAt: '',
       blocks: structuredClone(state.blocks)
     };
     const current = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
@@ -1039,9 +1045,12 @@ function initMaterialBuilder() {
       return;
     }
     assigned.forEach(item => {
+      const actionLabel = item.status === 'tilldelad' ? 'Öppna formulär' : item.status === 'påbörjad' ? 'Fortsätt fylla i' : 'Öppna svar';
+      const submitLabel = item.status === 'inskickad' || item.status === 'granskad' ? 'Skicka in igen' : 'Skicka in till terapeut';
+      const reviewedMeta = item.reviewedAt ? ` · granskad ${escapeHtml(item.reviewedAt)}` : '';
       const card = document.createElement('div');
       card.className = 'card library-card';
-      card.innerHTML = `<div class="library-card-head"><div><span class="library-card-type">Hemuppgift</span><h3>${escapeHtml(item.title)}</h3></div></div><p>Status: ${escapeHtml(item.status)} · tilldelad ${escapeHtml(item.createdAt)}</p><div class="library-card-meta"><span>${item.blocks.length} block</span><span>${escapeHtml(item.patientName)}</span></div><div class="builder-toolbar"><button class="builder-action" type="button">Öppna formulär</button><button class="builder-action accent" type="button">Skicka in till terapeut</button></div>`;
+      card.innerHTML = `<div class="library-card-head"><div><span class="library-card-type">Hemuppgift</span><h3>${escapeHtml(item.title)}</h3></div><span class="status-pill status-${escapeAttribute(item.status)}">${escapeHtml(item.status)}</span></div><p>Status: ${escapeHtml(item.status)} · tilldelad ${escapeHtml(item.createdAt)}${reviewedMeta}</p><div class="library-card-meta"><span>${item.blocks.length} block</span><span>${escapeHtml(item.patientName)}</span></div><div class="builder-toolbar"><button class="builder-action" type="button">${actionLabel}</button><button class="builder-action accent" type="button">${submitLabel}</button></div>`;
       const [openBtn, submitBtn] = card.querySelectorAll('button');
       openBtn.addEventListener('click', () => openAssignment(item.id));
       submitBtn.addEventListener('click', () => submitAssignment(item.id));
@@ -1053,6 +1062,11 @@ function initMaterialBuilder() {
     const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
     const item = assigned.find(entry => entry.id === assignmentId);
     if (!item || !els.assignmentShell) return;
+    if (item.status === 'tilldelad') {
+      item.status = 'påbörjad';
+      localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
+      renderSavedCollections();
+    }
     state.activeAssignmentId = assignmentId;
     if (els.assignmentModalTitle) els.assignmentModalTitle.textContent = item.title;
     els.assignmentShell.innerHTML = '';
@@ -1211,7 +1225,9 @@ function initMaterialBuilder() {
     if (!item) return;
     item.answers = item.answers || {};
     item.answers[blockId] = { ...(item.answers[blockId] || {}), ...patch };
+    if (item.status === 'tilldelad') item.status = 'påbörjad';
     localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
+    renderSavedCollections();
   }
 
   function renderClientMaterials() {
@@ -1229,6 +1245,7 @@ function initMaterialBuilder() {
     const item = assigned.find(entry => entry.id === assignmentId);
     if (!item) return;
     item.status = 'inskickad';
+    item.reviewedAt = '';
     localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
 
     const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
@@ -1242,6 +1259,8 @@ function initMaterialBuilder() {
       patientName: item.patientName,
       title: item.title,
       submittedAt: new Date().toLocaleString('sv-SE'),
+      status: 'inskickad',
+      reviewedAt: '',
       blocks: structuredClone(item.blocks),
       answers: answersSnapshot,
       summary
@@ -1267,11 +1286,13 @@ function initMaterialBuilder() {
         title: item.title,
         description: `${item.patientName} · inskickad ${item.submittedAt} · ${item.blocks.length} block`,
         meta: [
+          `Status ${item.status || 'inskickad'}`,
           `${item.summary?.answeredCount || 0} svar ifyllda`,
           item.summary?.preview || 'Öppna för att granska svar'
         ],
         type: 'Inskick'
       });
+      card.querySelector('.library-card-head')?.insertAdjacentHTML('beforeend', `<span class="status-pill status-${escapeAttribute(item.status || 'inskickad')}">${escapeHtml(item.status || 'inskickad')}</span>`);
       const [primaryButton, secondaryButton] = card.querySelectorAll('button');
       primaryButton.textContent = 'Öppna inskick';
       secondaryButton.textContent = 'Öppna patienttråd';
@@ -1290,12 +1311,18 @@ function initMaterialBuilder() {
     const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
     const item = submissions.find(entry => entry.id === submissionId);
     if (!item || !els.submissionShell) return;
+    state.activeSubmissionId = submissionId;
+    if (els.markSubmissionReviewed) {
+      els.markSubmissionReviewed.hidden = item.status === 'granskad';
+      els.markSubmissionReviewed.disabled = item.status === 'granskad';
+      els.markSubmissionReviewed.textContent = item.status === 'granskad' ? 'Redan granskad' : 'Markera som granskad';
+    }
     if (els.submissionModalTitle) els.submissionModalTitle.textContent = item.title;
     els.submissionShell.innerHTML = '';
 
     const stage = document.createElement('section');
     stage.className = 'assignment-stage';
-    stage.innerHTML = `<div><span class="section-kicker">Inskickad av patient</span><h4>${escapeHtml(item.title)}</h4><p>Här kan terapeuten granska vad patienten faktiskt skickade in, block för block, utan att lämna gränssnittet.</p></div><div class="assignment-summary"><div><strong>Patient</strong><span>${escapeHtml(item.patientName)}</span></div><div><strong>Inskickad</strong><span>${escapeHtml(item.submittedAt)}</span></div><div><strong>Svar</strong><span>${item.summary?.answeredCount || 0} ifyllda delar</span></div></div>`;
+    stage.innerHTML = `<div><span class="section-kicker">Inskickad av patient</span><h4>${escapeHtml(item.title)}</h4><p>Här kan terapeuten granska vad patienten faktiskt skickade in, block för block, utan att lämna gränssnittet.</p></div><div class="assignment-summary"><div><strong>Patient</strong><span>${escapeHtml(item.patientName)}</span></div><div><strong>Status</strong><span>${escapeHtml(item.status || 'inskickad')}</span></div><div><strong>Inskickad</strong><span>${escapeHtml(item.submittedAt)}</span></div><div><strong>Svar</strong><span>${item.summary?.answeredCount || 0} ifyllda delar</span></div>${item.reviewedAt ? `<div><strong>Granskad</strong><span>${escapeHtml(item.reviewedAt)}</span></div>` : ''}</div>`;
     els.submissionShell.appendChild(stage);
 
     item.blocks.forEach((block, index) => {
@@ -1306,6 +1333,29 @@ function initMaterialBuilder() {
     });
 
     openModal(els.submissionModal);
+  }
+
+  function markSubmissionReviewed(submissionId) {
+    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+    const item = submissions.find(entry => entry.id === submissionId);
+    if (!item) return;
+
+    const reviewedAt = new Date().toLocaleString('sv-SE');
+    item.status = 'granskad';
+    item.reviewedAt = reviewedAt;
+    localStorage.setItem(STORAGE_KEYS.submissions, JSON.stringify(submissions));
+
+    const assigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
+    const assignment = assigned.find(entry => entry.id === item.assignmentId);
+    if (assignment) {
+      assignment.status = 'granskad';
+      assignment.reviewedAt = reviewedAt;
+      localStorage.setItem(STORAGE_KEYS.assigned, JSON.stringify(assigned));
+    }
+
+    renderSavedCollections();
+    openSubmission(submissionId);
+    showToast('Markerad som granskad', `${item.title} är nu markerad som granskad.`);
   }
 
   function renderSubmissionBlock(block, answers, blockIndex) {

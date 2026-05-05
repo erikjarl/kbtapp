@@ -216,6 +216,7 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .builder-action svg,.settings-toggle svg,.icon-button svg{width:18px;height:18px}
 .builder-action:hover,.settings-toggle:hover,.icon-button:hover{transform:translateY(-1px);border-color:#b8c7d7;box-shadow:0 10px 24px rgba(43,95,138,0.08)}
 .builder-action.accent{background:#1f1b18;color:#f7f4ef;border-color:#1f1b18}
+.builder-action.accent-soft{background:#eef6ef;color:#41664a;border-color:#d6e8d7}
 .builder-action.danger{color:#9b4f43;border-color:#e6c8c0;background:#fff8f6}
 .builder-action.ghost{padding:8px 12px;font-size:.84rem}
 .builder-layout{display:grid;grid-template-columns:minmax(240px,296px) minmax(0,1fr) minmax(252px,312px);gap:14px;align-items:start}
@@ -356,6 +357,11 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .preview-patient-meta{display:flex;flex-wrap:wrap;gap:8px}
 .preview-patient-meta span,.preview-status-chip{display:inline-flex;align-items:center;padding:7px 11px;border-radius:999px;background:#fff;border:1px solid #e5ddd2;color:#5a534d;font-size:.78rem;font-weight:600}
 .preview-status-chip{background:#eef6ef;border-color:#d6e8d7;color:#41664a}
+.status-pill{display:inline-flex;align-items:center;justify-content:center;padding:7px 11px;border-radius:999px;font-size:.76rem;font-weight:700;border:1px solid #e5ddd2;background:#fff;color:#5a534d;white-space:nowrap}
+.status-tilldelad{background:#fff7ea;border-color:#ecd8ab;color:#8a6220}
+.status-påbörjad{background:#eef4ff;border-color:#d6e2ff;color:#3f5f9b}
+.status-inskickad{background:#f4efff;border-color:#ddd2ff;color:#6545a2}
+.status-granskad{background:#eef6ef;border-color:#d6e8d7;color:#41664a}
 .preview-helper-note{padding:12px 14px;border-radius:16px;background:#f6efe7;border:1px solid #eadfd1;color:#5f5852;font-size:.85rem}
 .assignment-modal-card{width:min(1100px,100%)}
 .assignment-shell{max-height:min(74vh,900px);padding-right:0}

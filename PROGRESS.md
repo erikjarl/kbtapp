@@ -126,3 +126,36 @@
 ### Nästa steg
 - Välj nästa tydliga del i samma område: antingen återkopplingsflöde från terapeut tillbaka till patient eller enklare statusmarkeringar för uppgift `tilldelad / påbörjad / inskickad / granskad`
 - Alternativt byt spår till auth-grund om målet blir att börja knyta vyerna till riktiga roller och sessioner
+
+## 2026-05-05 — Statusflöde för hemuppgifter från tilldelad till granskad
+
+### Vad jag arbetade med
+- En avgränsad del: statushanteringen för tilldelade hemuppgifter i patient- och terapeutvyn
+- Målet var att göra statusen begriplig och testbar genom hela kedjan `tilldelad → påbörjad → inskickad → granskad`
+
+### Vad jag ändrade
+- Lade till tydliga statuschips i patientens uppgiftskort och terapeutens inskickskort
+- Gjorde så att en uppgift automatiskt går från `tilldelad` till `påbörjad` när patienten öppnar formuläret eller börjar fylla i svar
+- Behöll `inskickad` som explicit status vid inskick och nollställde tidigare granskningsmarkering vid ny inskickning
+- Lade till terapeutknapp `Markera som granskad` i granskningsmodalen för inskickat material
+- Synkade granskningsmarkeringen tillbaka till den tilldelade uppgiften så patienten också ser att uppgiften är granskad
+- Justerade knapptexter i patientvyn så de bättre matchar läget: `Öppna formulär`, `Fortsätt fylla i`, `Öppna svar` och `Skicka in igen`
+- Lade till ett riktat Playwright-test för statusflödet samt sparade desktop- och mobilskärmdumpar i `qa-artifacts/`
+
+### Vad som nu fungerar
+- Patientens hemuppgift visar nu begriplig status i kortet istället för bara statisk text
+- Status växlar nu praktiskt mellan `tilldelad`, `påbörjad`, `inskickad` och `granskad`
+- Terapeuten kan markera ett inskick som granskat direkt i modal utan extra manuella steg
+- Om patienten skickar in samma uppgift igen går den tillbaka till `inskickad` tills terapeuten granskar på nytt
+- Praktiskt test verifierade:
+  - desktop 1440×900: tilldela uppgift → öppna som patient → status blir `påbörjad` → skicka in → terapeut öppnar inskick → markerar `granskad`
+  - mobil 390×844: tilldela uppgift → öppna formulär → status blir `påbörjad` → skicka in → kortet visar `inskickad` och `Skicka in igen`
+
+### Vad som inte fungerar
+- Flödet är fortfarande helt lokalt/mockat i `localStorage` utan riktig backend eller fleranvändarsynk
+- `granskad` visas nu som status men det finns ännu ingen riktig terapeutåterkoppling, kommentar eller blockvis respons tillbaka till patienten
+- Browser-verktyget användes inte här heller; praktisk testning gjordes med lokal Playwright-körning mot lokal server
+
+### Nästa steg
+- Bygg nästa lilla del i samma område: enkel återkoppling från terapeut tillbaka till patient kopplad till ett inskick eller en uppgift
+- Alternativt lägg till filtrering/sortering i terapeutens inskicklista efter status för att göra uppföljning snabbare
