@@ -463,6 +463,38 @@
 - Nästa rimliga tydliga del är att flytta sparat materialbibliotek till backend och scopea det per inloggad terapeut, så att även skapade material följer kontot
 - Alternativt bygga en liten explicit terapeut–patientkoppling i backend så att tilldelning, meddelanden och inskick kan grupperas renare när flera terapeuter/patienter finns i databasen
 
+## 2026-05-06 — Robustare registrering och inloggningsfeedback på startsidan
+
+### Vad jag arbetade med
+- En avgränsad del: själva auth-ingången på startsidan
+- Målet var att göra registrering och inloggning mer robust i praktiken nu när grundflödet redan finns, så att första fungerande konto-/loginflödet blir mindre skört för fortsatt testning
+
+### Vad jag ändrade
+- Lade till fältet `Bekräfta lösenord` i registreringsformuläret
+- Lade till frontendvalidering som stoppar registrering om lösenorden inte matchar
+- Lade till tydligare felmeddelande om frontend inte kan nå den lokala servern
+- Lade till `busy`-hantering för auth-knapparna så `Logga in` och `Skapa konto` tillfälligt disable:as under pågående request och visar aktuell status
+- Uppdaterade Playwright-testet för auth så det använder aktuell `BASE_URL` via env och fyller i det nya bekräftelsefältet
+- Körde om praktiskt auth-test och uppdaterade auth-skärmdumparna i `qa-artifacts/`
+
+### Vad som nu fungerar
+- Registrering kräver nu att lösenordet bekräftas innan request skickas
+- Användaren får snabbare och tydligare feedback om servern inte är startad eller inte går att nå
+- Dubbelsubmits i auth-flödet minskar eftersom submit-knapparna låses medan requesten pågår
+- Praktiskt test verifierade fortsatt fungerande auth-flöde på lokal Node-server:
+  - desktop 1440×900: skapa terapeutkonto → logga ut → logga in igen
+  - mobil 390×844: skapa patientkonto → öppna patientvy
+- `node --check script.js && node --check playwright-auth-check.js` passerar
+
+### Vad som inte fungerar
+- Browser-verktyget gick fortfarande inte att använda eftersom Chrome-attach saknade fungerande debug-port; praktisk verifiering gjordes därför fortsatt med lokal Playwright
+- Auth-flödet är fortfarande enkelt: ingen lösenordsåterställning, ingen e-postverifiering och ingen verklig åtkomstmodell utöver roll + lokal session
+- Materialbibliotek och mallbibliotek är fortfarande inte flyttade till backend ännu
+
+### Nästa steg
+- Nästa rimliga lilla steg nära auth-spåret är att flytta sparat materialbibliotek till backend och scopea det per inloggad terapeut
+- Alternativt lägga till en mycket enkel terapeut–patientkoppling i backend så att valbara patienter blir mindre beroende av seedad demodata
+
 ## 2026-05-05 — Enkel backend för konton, lösenord och persisterad login
 
 ### Vad jag arbetade med

@@ -34,19 +34,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function apiRequest(url, payload = {}, options = {}) {
     const token = getAuthToken();
-    const response = await fetch(url, {
-      method: options.method || 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
-      body: options.method === 'GET' ? undefined : JSON.stringify(payload)
-    });
+    let response;
+    try {
+      response = await fetch(url, {
+        method: options.method || 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: options.method === 'GET' ? undefined : JSON.stringify(payload)
+      });
+    } catch (error) {
+      throw new Error('Kunde inte nå servern. Starta appen lokalt och försök igen.');
+    }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(data.error || 'Något gick fel.');
     }
     return data;
+  }
+
+  function setAuthFormBusy(form, isBusy, busyLabel) {
+    if (!form) return;
+    const submitButton = form.querySelector('.auth-submit');
+    if (!submitButton) return;
+    if (!submitButton.dataset.idleLabel) {
+      submitButton.dataset.idleLabel = submitButton.textContent.trim();
+    }
+    submitButton.disabled = isBusy;
+    submitButton.textContent = isBusy ? busyLabel : submitButton.dataset.idleLabel;
   }
 
   function syncRoleButtons() {
@@ -112,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
     const formData = new FormData(loginForm);
     setAuthFeedback('Loggar in…', 'neutral');
+    setAuthFormBusy(loginForm, true, 'Loggar in…');
     try {
       const result = await apiRequest('/api/auth/login', {
         email: formData.get('email'),
@@ -126,18 +143,29 @@ document.addEventListener('DOMContentLoaded', () => {
       document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role, user: result.user } }));
     } catch (error) {
       setAuthFeedback(error.message, 'error');
+    } finally {
+      setAuthFormBusy(loginForm, false);
     }
   });
 
   registerForm?.addEventListener('submit', async event => {
     event.preventDefault();
     const formData = new FormData(registerForm);
+    const password = String(formData.get('password') || '');
+    const passwordConfirm = String(formData.get('passwordConfirm') || '');
+
+    if (password !== passwordConfirm) {
+      setAuthFeedback('Lösenorden matchar inte. Kontrollera och försök igen.', 'error');
+      return;
+    }
+
     setAuthFeedback('Skapar konto…', 'neutral');
+    setAuthFormBusy(registerForm, true, 'Skapar konto…');
     try {
       const result = await apiRequest('/api/auth/register', {
         name: formData.get('name'),
         email: formData.get('email'),
-        password: formData.get('password'),
+        password,
         role: authState.role
       });
       localStorage.setItem(AUTH_STORAGE_KEY, result.token);
@@ -148,6 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
       document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role, user: result.user } }));
     } catch (error) {
       setAuthFeedback(error.message, 'error');
+    } finally {
+      setAuthFormBusy(registerForm, false);
     }
   });
 

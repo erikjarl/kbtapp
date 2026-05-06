@@ -55,6 +55,7 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .auth-input{width:100%;border:1px solid #ddd5ca;background:#fffdfa;border-radius:16px;padding:13px 14px;color:#241f1b}
 .auth-input:focus{outline:none;border-color:#2b5f8a;box-shadow:0 0 0 3px rgba(43,95,138,.12)}
 .auth-submit{margin-top:6px;justify-content:center}
+.auth-submit[disabled]{opacity:.65;cursor:wait;transform:none;box-shadow:none}
 .auth-feedback{padding:12px 14px;border-radius:18px;background:#fffaf4;border:1px solid #e7ddd0;color:#5f5852;font-size:.88rem;text-align:center}
 .auth-feedback[data-tone="success"]{background:#eef8f6;border-color:#d8ece7;color:#2e7d78}
 .auth-feedback[data-tone="error"]{background:#fff5f2;border-color:#f0d2c8;color:#9b4f43}

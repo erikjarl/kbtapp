@@ -1,7 +1,7 @@
 const { chromium, devices } = require('playwright');
 
 const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const baseUrl = 'http://127.0.0.1:4174';
+const baseUrl = process.env.BASE_URL || `http://127.0.0.1:${process.env.PORT || 4174}`;
 
 async function registerAndOpen(page, role, name, email, password) {
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
@@ -9,6 +9,7 @@ async function registerAndOpen(page, role, name, email, password) {
   await page.getByLabel('Namn').fill(name);
   await page.getByLabel('E-post').nth(1).fill(email);
   await page.getByLabel('Lösenord').nth(1).fill(password);
+  await page.getByLabel('Bekräfta lösenord').fill(password);
   await page.getByRole('button', { name: 'Skapa konto' }).click();
   await page.waitForTimeout(400);
 }
