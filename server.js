@@ -24,7 +24,7 @@ const MIME_TYPES = {
 function ensureDb() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(DB_PATH)) {
-    fs.writeFileSync(DB_PATH, JSON.stringify({ users: [], sessions: [], assigned: [], submissions: [] }, null, 2));
+    fs.writeFileSync(DB_PATH, JSON.stringify({ users: [], sessions: [], assigned: [], submissions: [], messages: [] }, null, 2));
   }
 }
 
@@ -35,6 +35,7 @@ function readDb() {
   db.sessions = Array.isArray(db.sessions) ? db.sessions : [];
   db.assigned = Array.isArray(db.assigned) ? db.assigned : [];
   db.submissions = Array.isArray(db.submissions) ? db.submissions : [];
+  db.messages = Array.isArray(db.messages) ? db.messages : [];
   return db;
 }
 
@@ -218,6 +219,25 @@ async function handleApi(req, res, pathname) {
       sessionData.db.submissions = body.items;
       writeDb(sessionData.db);
       return sendJson(res, 200, { ok: true, items: sessionData.db.submissions });
+    }
+  }
+
+  if (pathname === '/api/data/messages') {
+    const sessionData = getSessionUser(req);
+    if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
+
+    if (req.method === 'GET') {
+      return sendJson(res, 200, { items: sessionData.db.messages });
+    }
+
+    if (req.method === 'PUT') {
+      const body = await parseBody(req);
+      if (!Array.isArray(body.items)) {
+        return sendJson(res, 400, { error: 'Meddelandedata måste vara en array.' });
+      }
+      sessionData.db.messages = body.items;
+      writeDb(sessionData.db);
+      return sendJson(res, 200, { ok: true, items: sessionData.db.messages });
     }
   }
 

@@ -357,6 +357,43 @@
 - Rimlig nästa tydliga del är att knyta den serverpersistade hemuppgiftsdatan tydligare till inloggad användare/roll i liten skala, så att patientens vy inte längre bygger på en fast mockad patientidentitet
 - Alternativt flytta nästa centrala datamängd till backend, helst meddelandetrådar mellan terapeut och patient
 
+## 2026-05-06 — Serverpersistens för meddelandetrådar
+
+### Vad jag arbetade med
+- En avgränsad del: meddelandeflödet mellan terapeut och patient
+- Målet var att flytta meddelandetrådarna från enbart `localStorage` till samma enkla backendmönster som redan används för auth, tilldelningar och inskick
+
+### Vad jag ändrade
+- Utökade `server.js` så databasen nu även kan lagra `messages`
+- Lade till auth-skyddade API-ytor för meddelanden:
+  - `GET /api/data/messages`
+  - `PUT /api/data/messages`
+- Utökade frontendstaten i `script.js` med servercache för meddelandetrådar
+- Bytte meddelandeflödet så trådar i första hand läses från backend och inte bara från lokal `localStorage`
+- Lade till enkel migrering: om äldre lokala meddelanden finns och servern är tom laddas de upp automatiskt efter inloggning
+- Gjorde meddelandesparning defensiv så användaren får toast om spara misslyckas
+- Lade till riktat Playwright-test `playwright-message-persistence-check.js`
+- Sparade nya QA-skärmdumpar i `qa-artifacts/message-persistence-desktop.png` och `qa-artifacts/message-persistence-mobile.png`
+
+### Vad som nu fungerar
+- Meddelandetrådar sparas nu i backendens JSON-fil och överlever omladdning
+- Terapeut kan skicka ett nytt svar i `Patientmeddelanden`, ladda om sidan och fortfarande se samma meddelande
+- Patient kan skicka ett nytt meddelande i `Kontakta min behandlare`, ladda om sidan och fortfarande se samma meddelande
+- Äldre lokala trådar kan följa med in i backend första gången efter inloggning i denna version
+- Praktiskt test verifierade:
+  - desktop 1440×900: registrera terapeut → öppna `Patientmeddelanden` → skicka nytt svar → ladda om → meddelandet finns kvar
+  - mobil 390×844: registrera patient → öppna `Kontakta min behandlare` → skicka nytt meddelande → ladda om → meddelandet finns kvar
+- `node --check server.js && node --check script.js && node --check playwright-message-persistence-check.js` passerar
+
+### Vad som inte fungerar
+- Meddelandetrådarna är ännu inte isolerade per verklig terapeut-patientrelation; de använder fortfarande appens nuvarande mockade patientstruktur
+- Tilldelningar, inskick och meddelanden är nu serverpersistade, men materialbibliotek och mallbibliotek ligger fortfarande lokalt i frontend
+- Browser-verktyget användes inte heller här; praktisk verifiering gjordes med lokal Playwright mot Node-server på port `4176`
+
+### Nästa steg
+- Rimlig nästa tydliga del är att börja knyta patientvyn till den faktiska inloggade användaren i liten skala, så att rätt tråd/uppgifter/material visas utan fast mockad patientidentitet
+- Alternativt flytta nästa centrala datamängd till backend, helst materialbibliotek eller mallbibliotek
+
 ## 2026-05-05 — Enkel backend för konton, lösenord och persisterad login
 
 ### Vad jag arbetade med

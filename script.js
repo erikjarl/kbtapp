@@ -271,6 +271,7 @@ function initMaterialBuilder() {
     submissionSort: 'needs-review',
     serverAssigned: [],
     serverSubmissions: [],
+    serverMessages: [],
     serverDataLoaded: false
   };
 
@@ -391,6 +392,10 @@ function initMaterialBuilder() {
     return state.serverSubmissions;
   }
 
+  function getMessageThreads() {
+    return ensureMessageThreads();
+  }
+
   async function saveAssignedItems(items) {
     state.serverAssigned = items;
     if (!getAuthToken()) return items;
@@ -407,32 +412,51 @@ function initMaterialBuilder() {
     return state.serverSubmissions;
   }
 
+  async function saveMessageThreads(items) {
+    state.serverMessages = items;
+    if (!getAuthToken()) {
+      localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(items));
+      return items;
+    }
+    const result = await serverDataRequest('/api/data/messages', { items }, 'PUT');
+    state.serverMessages = Array.isArray(result.items) ? result.items : items;
+    localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(state.serverMessages));
+    return state.serverMessages;
+  }
+
   async function loadServerCollections() {
     if (!getAuthToken()) return;
     try {
-      const [assignedResult, submissionsResult] = await Promise.all([
+      const [assignedResult, submissionsResult, messagesResult] = await Promise.all([
         serverDataRequest('/api/data/assigned'),
-        serverDataRequest('/api/data/submissions')
+        serverDataRequest('/api/data/submissions'),
+        serverDataRequest('/api/data/messages')
       ]);
 
       const assignedItems = Array.isArray(assignedResult.items) ? assignedResult.items : [];
       const submissionItems = Array.isArray(submissionsResult.items) ? submissionsResult.items : [];
+      const messageItems = Array.isArray(messagesResult.items) ? messagesResult.items : [];
       const legacyAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
       const legacySubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+      const legacyMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
 
       state.serverAssigned = assignedItems.length ? assignedItems : legacyAssigned;
       state.serverSubmissions = submissionItems.length ? submissionItems : legacySubmissions;
+      state.serverMessages = messageItems.length ? messageItems : legacyMessages;
 
       if (!assignedItems.length && legacyAssigned.length) await saveAssignedItems(state.serverAssigned);
       if (!submissionItems.length && legacySubmissions.length) await saveSubmissionItems(state.serverSubmissions);
+      if (!messageItems.length && legacyMessages.length) await saveMessageThreads(state.serverMessages);
 
       localStorage.removeItem(STORAGE_KEYS.assigned);
       localStorage.removeItem(STORAGE_KEYS.submissions);
+      localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(state.serverMessages));
       state.serverDataLoaded = true;
     } catch (error) {
       console.warn('Kunde inte läsa behandlingsdata från servern:', error);
       state.serverAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
       state.serverSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+      state.serverMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
     }
   }
 
@@ -442,8 +466,10 @@ function initMaterialBuilder() {
     } else {
       state.serverAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
       state.serverSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
+      state.serverMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
     }
     renderSavedCollections();
+    renderMessages();
   });
 
   function bindPanelLibrary() {
@@ -536,10 +562,8 @@ function initMaterialBuilder() {
     });
   }
 
-  function ensureMessageThreads() {
-    const existing = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
-    if (existing.length) return existing;
-    const seeded = [
+  function seededMessageThreads() {
+    return [
       createMessageThread(patients[0], [
         createMessage('client', 'Hej, jag har fyllt i veckans registrering men är osäker på sista delen.', '2026-05-04 09:12'),
         createMessage('therapist', 'Tack, jag ser den. Vi går igenom sista delen tillsammans i nästa session.', '2026-05-04 10:03')
@@ -551,6 +575,17 @@ function initMaterialBuilder() {
         createMessage('therapist', 'Bekräftar torsdag 14.00. Ta gärna med dina anteckningar om veckan.', '2026-05-04 11:20')
       ])
     ];
+  }
+
+  function ensureMessageThreads() {
+    if (Array.isArray(state.serverMessages) && state.serverMessages.length) return state.serverMessages;
+    const existing = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
+    if (existing.length) {
+      state.serverMessages = existing;
+      return existing;
+    }
+    const seeded = seededMessageThreads();
+    state.serverMessages = seeded;
     localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(seeded));
     return seeded;
   }
@@ -573,15 +608,7 @@ function initMaterialBuilder() {
     };
   }
 
-  function getMessageThreads() {
-    return ensureMessageThreads();
-  }
-
-  function saveMessageThreads(threads) {
-    localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(threads));
-  }
-
-  function sendMessage(author, patientId, rawText) {
+  async function sendMessage(author, patientId, rawText) {
     const text = rawText.trim();
     if (!text) {
       showToast('Tomt meddelande', 'Skriv något innan du skickar.');
@@ -595,9 +622,13 @@ function initMaterialBuilder() {
       threads.unshift(thread);
     }
     thread.messages.push(createMessage(author, text));
-    saveMessageThreads(threads);
-    renderMessages();
-    showToast(author === 'therapist' ? 'Svar skickat' : 'Meddelande skickat', patientLabel(patientId));
+    try {
+      await saveMessageThreads(threads);
+      renderMessages();
+      showToast(author === 'therapist' ? 'Svar skickat' : 'Meddelande skickat', patientLabel(patientId));
+    } catch (error) {
+      showToast('Kunde inte spara meddelandet', error.message || 'Försök igen.');
+    }
   }
 
   function renderMessages() {
