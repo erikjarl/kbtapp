@@ -119,6 +119,38 @@ function publicUser(user) {
   };
 }
 
+function getClientPatientId(user) {
+  return user?.role === 'client' ? `client_${user.id}` : '';
+}
+
+function itemMatchesUserScope(item, user, collectionName) {
+  if (!item || !user) return false;
+
+  if (collectionName === 'messages') {
+    if (user.role === 'therapist') {
+      return !item.therapistUserId || item.therapistUserId === user.id;
+    }
+    return item.patientUserId === user.id || item.patientId === getClientPatientId(user);
+  }
+
+  if (user.role === 'therapist') {
+    return !item.therapistUserId || item.therapistUserId === user.id;
+  }
+
+  return item.patientUserId === user.id || item.patientId === getClientPatientId(user);
+}
+
+function getScopedItems(db, user, collectionName) {
+  const items = Array.isArray(db[collectionName]) ? db[collectionName] : [];
+  return items.filter(item => itemMatchesUserScope(item, user, collectionName));
+}
+
+function mergeScopedItems(db, user, collectionName, scopedItems) {
+  const currentItems = Array.isArray(db[collectionName]) ? db[collectionName] : [];
+  const preservedItems = currentItems.filter(item => !itemMatchesUserScope(item, user, collectionName));
+  db[collectionName] = [...preservedItems, ...scopedItems];
+}
+
 async function handleApi(req, res, pathname) {
   if (req.method === 'POST' && pathname === '/api/auth/register') {
     const body = await parseBody(req);
@@ -203,7 +235,7 @@ async function handleApi(req, res, pathname) {
     if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
 
     if (req.method === 'GET') {
-      return sendJson(res, 200, { items: sessionData.db.assigned });
+      return sendJson(res, 200, { items: getScopedItems(sessionData.db, sessionData.user, 'assigned') });
     }
 
     if (req.method === 'PUT') {
@@ -211,9 +243,9 @@ async function handleApi(req, res, pathname) {
       if (!Array.isArray(body.items)) {
         return sendJson(res, 400, { error: 'Assigned-data måste vara en array.' });
       }
-      sessionData.db.assigned = body.items;
+      mergeScopedItems(sessionData.db, sessionData.user, 'assigned', body.items);
       writeDb(sessionData.db);
-      return sendJson(res, 200, { ok: true, items: sessionData.db.assigned });
+      return sendJson(res, 200, { ok: true, items: getScopedItems(sessionData.db, sessionData.user, 'assigned') });
     }
   }
 
@@ -222,7 +254,7 @@ async function handleApi(req, res, pathname) {
     if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
 
     if (req.method === 'GET') {
-      return sendJson(res, 200, { items: sessionData.db.submissions });
+      return sendJson(res, 200, { items: getScopedItems(sessionData.db, sessionData.user, 'submissions') });
     }
 
     if (req.method === 'PUT') {
@@ -230,9 +262,9 @@ async function handleApi(req, res, pathname) {
       if (!Array.isArray(body.items)) {
         return sendJson(res, 400, { error: 'Submission-data måste vara en array.' });
       }
-      sessionData.db.submissions = body.items;
+      mergeScopedItems(sessionData.db, sessionData.user, 'submissions', body.items);
       writeDb(sessionData.db);
-      return sendJson(res, 200, { ok: true, items: sessionData.db.submissions });
+      return sendJson(res, 200, { ok: true, items: getScopedItems(sessionData.db, sessionData.user, 'submissions') });
     }
   }
 
@@ -241,7 +273,7 @@ async function handleApi(req, res, pathname) {
     if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
 
     if (req.method === 'GET') {
-      return sendJson(res, 200, { items: sessionData.db.messages });
+      return sendJson(res, 200, { items: getScopedItems(sessionData.db, sessionData.user, 'messages') });
     }
 
     if (req.method === 'PUT') {
@@ -249,9 +281,9 @@ async function handleApi(req, res, pathname) {
       if (!Array.isArray(body.items)) {
         return sendJson(res, 400, { error: 'Meddelandedata måste vara en array.' });
       }
-      sessionData.db.messages = body.items;
+      mergeScopedItems(sessionData.db, sessionData.user, 'messages', body.items);
       writeDb(sessionData.db);
-      return sendJson(res, 200, { ok: true, items: sessionData.db.messages });
+      return sendJson(res, 200, { ok: true, items: getScopedItems(sessionData.db, sessionData.user, 'messages') });
     }
   }
 

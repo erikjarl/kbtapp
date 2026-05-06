@@ -390,6 +390,19 @@ function initMaterialBuilder() {
     return { id, name, userId };
   }
 
+  function getCurrentTherapistIdentity() {
+    if (state.currentUser?.role === 'therapist') {
+      return {
+        therapistUserId: state.currentUser.id,
+        therapistName: state.currentUser.name
+      };
+    }
+    return {
+      therapistUserId: '',
+      therapistName: 'Dr. Lindgren'
+    };
+  }
+
   function patientProfileFromUser(user) {
     if (!user || user.role !== 'client') return null;
     return createPatientProfile(`client_${user.id}`, user.name, user.id);
@@ -688,11 +701,14 @@ function initMaterialBuilder() {
     return seeded;
   }
 
-  function createMessageThread(patient, messages = []) {
+  function createMessageThread(patient, messages = [], options = {}) {
+    const therapistIdentity = getCurrentTherapistIdentity();
     return {
       patientId: patient.id,
       patientName: patient.name,
-      therapistName: 'Dr. Lindgren',
+      patientUserId: options.patientUserId ?? patient.userId ?? null,
+      therapistUserId: options.therapistUserId ?? therapistIdentity.therapistUserId ?? '',
+      therapistName: options.therapistName ?? therapistIdentity.therapistName ?? 'Dr. Lindgren',
       messages
     };
   }
@@ -716,7 +732,9 @@ function initMaterialBuilder() {
     let thread = threads.find(item => item.patientId === patientId);
     if (!thread) {
       const patient = getKnownPatients().find(item => item.id === patientId) || createPatientProfile(patientId, patientLabel(patientId));
-      thread = createMessageThread(patient, []);
+      thread = createMessageThread(patient, [], {
+        patientUserId: patient.userId || null
+      });
       threads.unshift(thread);
     }
     thread.messages.push(createMessage(author, text));
@@ -1358,10 +1376,14 @@ function initMaterialBuilder() {
     state.activeClientPatientId = state.assignedPatientId;
     const patient = getKnownPatients().find(item => item.id === state.assignedPatientId);
     const title = getMaterialTitle();
+    const therapistIdentity = getCurrentTherapistIdentity();
     const assignedEntry = {
       id: `assigned_${Date.now()}`,
       patientId: patient.id,
+      patientUserId: patient.userId || null,
       patientName: patient.name,
+      therapistUserId: therapistIdentity.therapistUserId,
+      therapistName: therapistIdentity.therapistName,
       title,
       createdAt: new Date().toLocaleString('sv-SE'),
       status: 'tilldelad',
@@ -1371,7 +1393,20 @@ function initMaterialBuilder() {
     const current = [...getAssignedItems()];
     current.unshift(assignedEntry);
     await saveAssignedItems(current);
+
+    const threads = getMessageThreads();
+    const hasThread = threads.some(item => item.patientId === patient.id && (item.therapistUserId || '') === therapistIdentity.therapistUserId);
+    if (!hasThread) {
+      threads.unshift(createMessageThread(patient, [], {
+        patientUserId: patient.userId || null,
+        therapistUserId: therapistIdentity.therapistUserId,
+        therapistName: therapistIdentity.therapistName
+      }));
+      await saveMessageThreads(threads);
+    }
+
     renderSavedCollections();
+    renderMessages();
     showToast('Material tilldelat', `${title} skickades till ${patient.name}.`);
     closeModal(els.assignModal);
   }
@@ -1628,7 +1663,10 @@ function initMaterialBuilder() {
       id: existingIndex >= 0 ? submissions[existingIndex].id : `submission_${Date.now()}`,
       assignmentId: item.id,
       patientId: item.patientId,
+      patientUserId: item.patientUserId || state.currentUser?.id || null,
       patientName: item.patientName,
+      therapistUserId: item.therapistUserId || '',
+      therapistName: item.therapistName || 'Dr. Lindgren',
       title: item.title,
       submittedAt: new Date().toLocaleString('sv-SE'),
       status: 'inskickad',

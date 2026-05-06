@@ -428,6 +428,41 @@
 - Rimlig nästa tydliga del är att isolera serverpersistad behandlingsdata per relation eller åtminstone per patientkonto, så att flera verkliga användare inte delar samma gemensamma dataset
 - Alternativt flytta materialbiblioteket till backend och börja koppla sparat material tydligare till inloggad terapeut
 
+## 2026-05-06 — Scoped serverdata per inloggad användare
+
+### Vad jag arbetade med
+- En avgränsad del: att isolera serverpersistad behandlingsdata så att olika inloggade användare inte längre delar samma gemensamma listor för uppgifter, inskick och meddelanden
+- Målet var att göra auth-flödet mer verkligt användbart genom att låta backend returnera och spara bara relevant data för aktuell terapeut respektive patient
+
+### Vad jag ändrade
+- Utökade `server.js` med enkel scope-logik för `assigned`, `submissions` och `messages`
+- Gjorde `GET/PUT /api/data/assigned`, `GET/PUT /api/data/submissions` och `GET/PUT /api/data/messages` användarberoende i stället för helt globala
+- Lät backend bevara andra användares poster vid `PUT` i stället för att skriva över hela databasen okritiskt
+- Började spara `therapistUserId`, `therapistName` och `patientUserId` i tilldelade uppgifter, inskick och meddelandetrådar
+- Gjorde så att en ny tråd för vald patient skapas automatiskt vid tilldelning om terapeuten ännu inte har någon tråd med den patienten
+- Lade till riktat Playwright-test `playwright-scoped-data-check.js`
+- Sparade nya QA-skärmdumpar i `qa-artifacts/scoped-data-desktop.png` och `qa-artifacts/scoped-data-mobile.png`
+
+### Vad som nu fungerar
+- En patient som loggar in får bara sina egna serverpersistade uppgifter och meddelanden
+- En terapeut får nu i normalfallet bara sina egna serverpersistade uppgifter, inskick och trådar i stället för hela den delade datamängden
+- När terapeut A tilldelar en registrerad patient material och skickar meddelande kan patienten se detta, men terapeut B ser inte samma uppgift/tråd efter egen inloggning
+- Ny tilldelning till registrerad patient skapar nu också en matchande serverpersistad tråd för just den terapeut-patientrelationen
+- Praktiskt test verifierade:
+  - desktop 1440×900: registrera terapeut A och terapeut B, låt terapeut A tilldela material och skriva i tråd, logga sedan in som terapeut B och verifiera att samma uppgift/tråd inte syns där
+  - mobil 390×844: logga in som den registrerade patienten och verifiera att både tilldelad uppgift och terapeutens meddelande syns i patientvyn
+- `node --check server.js && node --check script.js && node --check playwright-scoped-data-check.js` passerar
+
+### Vad som inte fungerar
+- Äldre seedad/mockad data utan sparade relationsfält kan fortfarande vara synlig för terapeuter som fallback i denna version; den nya isoleringen gäller säkrast för data som skapats efter denna ändring
+- Relationerna är fortfarande enkla: det finns ännu ingen explicit separat relationsmodell mellan flera terapeuter och samma patient utöver scoped fält på posterna
+- Materialbibliotek och mallbibliotek ligger fortfarande lokalt i frontend och är ännu inte kopplade till server eller specifik terapeut
+- Browser-verktyget användes inte heller i denna körning; praktisk verifiering gjordes med lokal Playwright mot Node-server på port `4178`
+
+### Nästa steg
+- Nästa rimliga tydliga del är att flytta sparat materialbibliotek till backend och scopea det per inloggad terapeut, så att även skapade material följer kontot
+- Alternativt bygga en liten explicit terapeut–patientkoppling i backend så att tilldelning, meddelanden och inskick kan grupperas renare när flera terapeuter/patienter finns i databasen
+
 ## 2026-05-05 — Enkel backend för konton, lösenord och persisterad login
 
 ### Vad jag arbetade med
