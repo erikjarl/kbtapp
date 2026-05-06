@@ -537,3 +537,41 @@
 ### Nästa steg
 - Rimlig nästa tydliga del är att flytta en enda central datamängd från `localStorage` till backend, helst `assigned/submissions` eller meddelandetrådar, så att ändrad behandlingsdata också persisteras server-side
 - När det görs bör datat kopplas till inloggad användare/roll i liten skala i stället för att införa stor ny arkitektur
+
+## 2026-05-06 — Serverpersistens för terapeutens materialbibliotek
+
+### Vad jag arbetade med
+- En avgränsad del: terapeutens sparade materialbibliotek
+- Målet var att låta sparat patientmaterial följa det inloggade terapeutkontot i backend, i stället för att bara ligga lokalt i frontend
+
+### Vad jag ändrade
+- Utökade `server.js` så databasen nu även kan lagra `library`
+- Lade till auth-skyddad API-yta för materialbiblioteket:
+  - `GET /api/data/library`
+  - `PUT /api/data/library`
+- Scopeade biblioteksposter per inloggad terapeut så andra terapeuter inte får samma sparade material
+- Utökade frontendstaten i `script.js` med `serverLibrary`
+- Bytte `Spara i materialbibliotek` så sparade objekt nu skrivs till backend för terapeuter och inte bara till `localStorage`
+- Lade till enkel migrering: om äldre lokalt sparat bibliotek finns och serverns bibliotek är tomt laddas det upp vid inloggning som terapeut
+- Uppdaterade biblioteksrenderingen så terapeutens sparade material nu läses från servercache
+- Skrev ett riktat Playwright-test `playwright-library-persistence-check.js`
+- Sparade QA-skärmdumpar i `qa-artifacts/library-persistence-desktop.png` och `qa-artifacts/library-persistence-mobile.png`
+
+### Vad som nu fungerar
+- Terapeuten kan spara material i sitt bibliotek och få tillbaka det efter omladdning
+- Sparat materialbibliotek följer nu det inloggade terapeutkontot i backendens JSON-fil
+- En annan terapeut ser inte samma sparade bibliotekspost i sitt eget konto
+- Äldre lokalt sparat bibliotek kan flyttas in till backend första gången efter inloggning i denna version
+- Praktiskt test verifierade:
+  - desktop 1440×900: registrera terapeut A → spara material i bibliotek → öppna bibliotek → ladda om → samma extra bibliotekskort ligger kvar
+  - mobil 390×844: registrera terapeut B → öppna bibliotek → ser bara seedade bibliotekskort och inte terapeut A:s sparade material
+- `node --check server.js && node --check script.js && node --check playwright-library-persistence-check.js` passerar
+
+### Vad som inte fungerar
+- Mallbiblioteket ligger fortfarande lokalt i frontend och är ännu inte flyttat till backend
+- Patientens sektion `Mitt material` använder fortfarande seedad/lokal materialdata och är ännu inte kopplad till terapeutens serverpersistade bibliotek
+- Browser-verktyget gick fortfarande inte att använda pålitligt i denna miljö; praktisk verifiering gjordes därför med lokal Playwright mot systemets Chrome på port `4179`
+
+### Nästa steg
+- Nästa rimliga tydliga del är att koppla patientens `Mitt material` till verkligt tilldelat/sparat servermaterial så samma objektkedja känns mer sammanhållen
+- Alternativt flytta mallbiblioteket till backend och scopea även mallar per terapeut för att göra byggarflödet helt kontoanknutet

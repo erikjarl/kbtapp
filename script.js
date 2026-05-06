@@ -302,6 +302,7 @@ function initMaterialBuilder() {
     serverAssigned: [],
     serverSubmissions: [],
     serverMessages: [],
+    serverLibrary: [],
     serverDataLoaded: false,
     currentUser: null,
     availableClients: []
@@ -508,6 +509,10 @@ function initMaterialBuilder() {
     return state.serverAssigned;
   }
 
+  function getLibraryItems() {
+    return state.serverLibrary;
+  }
+
   function getSubmissionItems() {
     return state.serverSubmissions;
   }
@@ -522,6 +527,18 @@ function initMaterialBuilder() {
     const result = await serverDataRequest('/api/data/assigned', { items }, 'PUT');
     state.serverAssigned = Array.isArray(result.items) ? result.items : items;
     return state.serverAssigned;
+  }
+
+  async function saveLibraryItems(items) {
+    state.serverLibrary = items;
+    if (!getAuthToken() || state.currentUser?.role !== 'therapist') {
+      localStorage.setItem(STORAGE_KEYS.library, JSON.stringify(items));
+      return items;
+    }
+    const result = await serverDataRequest('/api/data/library', { items }, 'PUT');
+    state.serverLibrary = Array.isArray(result.items) ? result.items : items;
+    localStorage.setItem(STORAGE_KEYS.library, JSON.stringify(state.serverLibrary));
+    return state.serverLibrary;
   }
 
   async function saveSubmissionItems(items) {
@@ -548,30 +565,43 @@ function initMaterialBuilder() {
     if (!getAuthToken()) return;
     try {
       await loadAvailableClients();
-      const [assignedResult, submissionsResult, messagesResult] = await Promise.all([
+      const requests = [
         serverDataRequest('/api/data/assigned'),
         serverDataRequest('/api/data/submissions'),
         serverDataRequest('/api/data/messages')
-      ]);
+      ];
+      if (state.currentUser?.role === 'therapist') {
+        requests.push(serverDataRequest('/api/data/library'));
+      }
+      const [assignedResult, submissionsResult, messagesResult, libraryResult] = await Promise.all(requests);
 
       const assignedItems = Array.isArray(assignedResult.items) ? assignedResult.items : [];
       const submissionItems = Array.isArray(submissionsResult.items) ? submissionsResult.items : [];
       const messageItems = Array.isArray(messagesResult.items) ? messagesResult.items : [];
+      const libraryItems = Array.isArray(libraryResult?.items) ? libraryResult.items : [];
       const legacyAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
       const legacySubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
       const legacyMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
+      const legacyLibrary = JSON.parse(localStorage.getItem(STORAGE_KEYS.library) || '[]');
 
       state.serverAssigned = assignedItems.length ? assignedItems : legacyAssigned;
       state.serverSubmissions = submissionItems.length ? submissionItems : legacySubmissions;
       state.serverMessages = messageItems.length ? messageItems : legacyMessages;
+      state.serverLibrary = state.currentUser?.role === 'therapist'
+        ? (libraryItems.length ? libraryItems : legacyLibrary)
+        : [];
 
       if (!assignedItems.length && legacyAssigned.length) await saveAssignedItems(state.serverAssigned);
       if (!submissionItems.length && legacySubmissions.length) await saveSubmissionItems(state.serverSubmissions);
       if (!messageItems.length && legacyMessages.length) await saveMessageThreads(state.serverMessages);
+      if (state.currentUser?.role === 'therapist' && !libraryItems.length && legacyLibrary.length) await saveLibraryItems(state.serverLibrary);
 
       localStorage.removeItem(STORAGE_KEYS.assigned);
       localStorage.removeItem(STORAGE_KEYS.submissions);
       localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(state.serverMessages));
+      if (state.currentUser?.role === 'therapist') {
+        localStorage.setItem(STORAGE_KEYS.library, JSON.stringify(state.serverLibrary));
+      }
       state.serverDataLoaded = true;
       syncActivePatientState();
       populatePatientSelect();
@@ -580,6 +610,7 @@ function initMaterialBuilder() {
       state.serverAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
       state.serverSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
       state.serverMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
+      state.serverLibrary = JSON.parse(localStorage.getItem(STORAGE_KEYS.library) || '[]');
       syncActivePatientState();
       populatePatientSelect();
     }
@@ -594,6 +625,7 @@ function initMaterialBuilder() {
       state.serverAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
       state.serverSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
       state.serverMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
+      state.serverLibrary = JSON.parse(localStorage.getItem(STORAGE_KEYS.library) || '[]');
       syncActivePatientState();
       populatePatientSelect();
     }
@@ -1441,7 +1473,7 @@ function initMaterialBuilder() {
     closeModal(els.assignModal);
   }
 
-  function saveCollection(kind) {
+  async function saveCollection(kind) {
     if (!state.blocks.length) {
       showToast('Inget att spara', 'Arbetsytan är tom. Lägg till block först.');
       return;
@@ -1455,16 +1487,26 @@ function initMaterialBuilder() {
       createdAt: new Date().toLocaleString('sv-SE'),
       blocks: structuredClone(state.blocks)
     };
-    const key = STORAGE_KEYS[kind];
-    const current = JSON.parse(localStorage.getItem(key) || '[]');
-    current.unshift(entry);
-    localStorage.setItem(key, JSON.stringify(current));
+    if (kind === 'library') {
+      const current = [...getLibraryItems()];
+      current.unshift({
+        ...entry,
+        therapistUserId: state.currentUser?.role === 'therapist' ? state.currentUser.id : '',
+        therapistName: state.currentUser?.role === 'therapist' ? state.currentUser.name : 'Dr. Lindgren'
+      });
+      await saveLibraryItems(current);
+    } else {
+      const key = STORAGE_KEYS[kind];
+      const current = JSON.parse(localStorage.getItem(key) || '[]');
+      current.unshift(entry);
+      localStorage.setItem(key, JSON.stringify(current));
+    }
     renderSavedCollections();
     showToast(kind === 'templates' ? 'Mall sparad' : 'Material sparat', title);
   }
 
   function renderSavedCollections() {
-    renderCollectionGrid(els.libraryGrid, materialSeed, JSON.parse(localStorage.getItem(STORAGE_KEYS.library) || '[]'), 'library');
+    renderCollectionGrid(els.libraryGrid, materialSeed, getLibraryItems(), 'library');
     renderCollectionGrid(els.templateGrid, templateSeed, JSON.parse(localStorage.getItem(STORAGE_KEYS.templates) || '[]'), 'templates');
     renderClientAssignments();
     renderClientMaterials();

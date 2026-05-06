@@ -24,7 +24,7 @@ const MIME_TYPES = {
 function ensureDb() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(DB_PATH)) {
-    fs.writeFileSync(DB_PATH, JSON.stringify({ users: [], sessions: [], assigned: [], submissions: [], messages: [] }, null, 2));
+    fs.writeFileSync(DB_PATH, JSON.stringify({ users: [], sessions: [], assigned: [], submissions: [], messages: [], library: [] }, null, 2));
   }
 }
 
@@ -36,6 +36,7 @@ function readDb() {
   db.assigned = Array.isArray(db.assigned) ? db.assigned : [];
   db.submissions = Array.isArray(db.submissions) ? db.submissions : [];
   db.messages = Array.isArray(db.messages) ? db.messages : [];
+  db.library = Array.isArray(db.library) ? db.library : [];
   return db;
 }
 
@@ -125,6 +126,10 @@ function getClientPatientId(user) {
 
 function itemMatchesUserScope(item, user, collectionName) {
   if (!item || !user) return false;
+
+  if (collectionName === 'library') {
+    return user.role === 'therapist' && (!item.therapistUserId || item.therapistUserId === user.id);
+  }
 
   if (collectionName === 'messages') {
     if (user.role === 'therapist') {
@@ -284,6 +289,28 @@ async function handleApi(req, res, pathname) {
       mergeScopedItems(sessionData.db, sessionData.user, 'messages', body.items);
       writeDb(sessionData.db);
       return sendJson(res, 200, { ok: true, items: getScopedItems(sessionData.db, sessionData.user, 'messages') });
+    }
+  }
+
+  if (pathname === '/api/data/library') {
+    const sessionData = getSessionUser(req);
+    if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
+    if (sessionData.user.role !== 'therapist') {
+      return sendJson(res, 403, { error: 'Endast terapeuter kan hantera materialbiblioteket.' });
+    }
+
+    if (req.method === 'GET') {
+      return sendJson(res, 200, { items: getScopedItems(sessionData.db, sessionData.user, 'library') });
+    }
+
+    if (req.method === 'PUT') {
+      const body = await parseBody(req);
+      if (!Array.isArray(body.items)) {
+        return sendJson(res, 400, { error: 'Materialbiblioteket måste vara en array.' });
+      }
+      mergeScopedItems(sessionData.db, sessionData.user, 'library', body.items);
+      writeDb(sessionData.db);
+      return sendJson(res, 200, { ok: true, items: getScopedItems(sessionData.db, sessionData.user, 'library') });
     }
   }
 
