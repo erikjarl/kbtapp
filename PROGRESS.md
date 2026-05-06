@@ -394,6 +394,40 @@
 - Rimlig nästa tydliga del är att börja knyta patientvyn till den faktiska inloggade användaren i liten skala, så att rätt tråd/uppgifter/material visas utan fast mockad patientidentitet
 - Alternativt flytta nästa centrala datamängd till backend, helst materialbibliotek eller mallbibliotek
 
+## 2026-05-06 — Inloggad patient får nu sin egen vy och kan väljas vid tilldelning
+
+### Vad jag arbetade med
+- En avgränsad del: kopplingen mellan autentisering och patientdata i appen
+- Målet var att minska beroendet av den fasta mockpatienten och göra så att en verkligt registrerad patient faktiskt ser sina egna uppgifter och sin egen kontaktvy efter inloggning
+
+### Vad jag ändrade
+- Lade till en liten auth-skyddad server-endpoint `GET /api/users?role=client` för att hämta registrerade patientkonton
+- Kopplade frontendstaten till aktuell inloggad användare så att patientrollen får ett eget stabilt patient-id baserat på användarkontot
+- Byggde om patientlistan i frontend så den nu kan kombinera seedade mockpatienter med verkligt registrerade klientkonton
+- Gjorde tilldelningsmodalens patientlista dynamisk så terapeuten kan välja registrerade patienter i stället för enbart hårdkodade exempelposter
+- Gjorde klientens meddelandevy och uppgiftsvy beroende av faktisk inloggad patientidentitet i stället för fast `Maja Svensson`
+- Lade till riktat Playwright-test `playwright-user-linked-client-flow.js`
+- Sparade nya QA-skärmdumpar i `qa-artifacts/user-linked-client-desktop.png` och `qa-artifacts/user-linked-client-mobile.png`
+
+### Vad som nu fungerar
+- En registrerad patient får nu ett eget patient-id kopplat till sitt konto och ser sin egen tråd/uppgiftsyta efter inloggning
+- Terapeuten kan nu se registrerade patientkonton i tilldelningslistan och tilldela material direkt till dem
+- När terapeuten tilldelar material till en registrerad patient dyker det upp i just den patientens vy efter inloggning
+- Klientens kontaktvy använder nu den faktiska inloggade patientens namn i stället för att alltid luta sig mot den fasta seedade patienten
+- Praktiskt test verifierade:
+  - desktop 1440×900: registrera terapeut → registrera patient → logga in som terapeut → skapa enkel hemuppgift → tilldela registrerad patient
+  - mobil 390×844: logga in som samma patient → öppna `Mina hemuppgifter` → se rätt tilldelad uppgift → öppna `Kontakta min behandlare` och se egen patientidentitet i vyn
+- `node --check server.js && node --check script.js && node --check playwright-user-linked-client-flow.js` passerar
+
+### Vad som inte fungerar
+- Data är fortfarande inte isolerad per terapeut-patientrelation på backendnivå; flera terapeuter delar fortfarande samma centrala listor för tilldelningar, inskick och meddelanden
+- Seedade mockpatienter finns fortfarande kvar parallellt med riktiga konton, vilket är användbart för demo men ännu inte helt renodlat
+- Browser-verktyget användes inte i denna körning heller; praktisk verifiering gjordes med lokal Playwright mot Node-server på port `4177`
+
+### Nästa steg
+- Rimlig nästa tydliga del är att isolera serverpersistad behandlingsdata per relation eller åtminstone per patientkonto, så att flera verkliga användare inte delar samma gemensamma dataset
+- Alternativt flytta materialbiblioteket till backend och börja koppla sparat material tydligare till inloggad terapeut
+
 ## 2026-05-05 — Enkel backend för konton, lösenord och persisterad login
 
 ### Vad jag arbetade med

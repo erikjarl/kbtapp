@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
       clientView.classList.remove('active');
       loginView.classList.add('active');
       setAuthFeedback('Du är utloggad.', 'success');
-      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: false } }));
+      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: false, user: null } }));
     });
   });
 
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loginForm.reset();
       setAuthFeedback(`Inloggad som ${result.user.name}.`, 'success');
       openRole(result.user.role);
-      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role } }));
+      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role, user: result.user } }));
     } catch (error) {
       setAuthFeedback(error.message, 'error');
     }
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
       registerForm.reset();
       setAuthFeedback(`Konto skapat för ${result.user.name}.`, 'success');
       openRole(result.user.role);
-      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role } }));
+      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role, user: result.user } }));
     } catch (error) {
       setAuthFeedback(error.message, 'error');
     }
@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
       applyUserToUi(result.user);
       setAuthFeedback(`Välkommen tillbaka, ${result.user.name}.`, 'success');
       openRole(result.user.role);
-      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role, restored: true } }));
+      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role, restored: true, user: result.user } }));
     } catch (error) {
       localStorage.removeItem(AUTH_STORAGE_KEY);
       setAuthFeedback('Tidigare session kunde inte återställas. Logga in igen.', 'error');
@@ -272,7 +272,9 @@ function initMaterialBuilder() {
     serverAssigned: [],
     serverSubmissions: [],
     serverMessages: [],
-    serverDataLoaded: false
+    serverDataLoaded: false,
+    currentUser: null,
+    availableClients: []
   };
 
   const collapsedTypes = new Set(['rating', 'textfield', 'table', 'emoji', 'info']);
@@ -384,6 +386,81 @@ function initMaterialBuilder() {
     return data;
   }
 
+  function createPatientProfile(id, name, userId = null) {
+    return { id, name, userId };
+  }
+
+  function patientProfileFromUser(user) {
+    if (!user || user.role !== 'client') return null;
+    return createPatientProfile(`client_${user.id}`, user.name, user.id);
+  }
+
+  function getKnownPatients() {
+    const seedProfiles = patients.map(item => createPatientProfile(item.id, item.name));
+    const dynamicProfiles = state.availableClients.map(user => patientProfileFromUser(user)).filter(Boolean);
+    const currentClientProfile = patientProfileFromUser(state.currentUser);
+    const combined = [...seedProfiles, ...dynamicProfiles, ...(currentClientProfile ? [currentClientProfile] : [])];
+    const seen = new Set();
+    return combined.filter(profile => {
+      if (!profile?.id || seen.has(profile.id)) return false;
+      seen.add(profile.id);
+      return true;
+    });
+  }
+
+  function getDefaultAssignedPatientId() {
+    return getKnownPatients()[0]?.id || patients[0].id;
+  }
+
+  function getCurrentClientPatientId() {
+    return patientProfileFromUser(state.currentUser)?.id || state.activeClientPatientId || getDefaultAssignedPatientId();
+  }
+
+  function syncActivePatientState() {
+    const knownPatients = getKnownPatients();
+    const clientPatientId = getCurrentClientPatientId();
+    if (!knownPatients.some(item => item.id === state.assignedPatientId)) {
+      state.assignedPatientId = getDefaultAssignedPatientId();
+    }
+    if (state.currentUser?.role === 'client') {
+      state.activeClientPatientId = clientPatientId;
+    } else if (!knownPatients.some(item => item.id === state.activeClientPatientId)) {
+      state.activeClientPatientId = clientPatientId;
+    }
+    if (!knownPatients.some(item => item.id === state.activeTherapistThreadPatientId)) {
+      state.activeTherapistThreadPatientId = clientPatientId;
+    }
+  }
+
+  async function loadAvailableClients() {
+    if (!getAuthToken()) {
+      state.availableClients = [];
+      syncActivePatientState();
+      return;
+    }
+    try {
+      const result = await serverDataRequest('/api/users?role=client');
+      state.availableClients = Array.isArray(result.users) ? result.users : [];
+    } catch (error) {
+      console.warn('Kunde inte läsa klientkonton från servern:', error);
+      state.availableClients = [];
+    }
+    syncActivePatientState();
+  }
+
+  function populatePatientSelect() {
+    if (!els.patientSelect) return;
+    const knownPatients = getKnownPatients();
+    els.patientSelect.innerHTML = '';
+    knownPatients.forEach(patient => {
+      const option = document.createElement('option');
+      option.value = patient.id;
+      option.textContent = patient.id.startsWith('client_') ? `${patient.name} (registrerat konto)` : `${patient.name} (${patient.id})`;
+      option.selected = patient.id === state.assignedPatientId;
+      els.patientSelect.appendChild(option);
+    });
+  }
+
   function getAssignedItems() {
     return state.serverAssigned;
   }
@@ -427,6 +504,7 @@ function initMaterialBuilder() {
   async function loadServerCollections() {
     if (!getAuthToken()) return;
     try {
+      await loadAvailableClients();
       const [assignedResult, submissionsResult, messagesResult] = await Promise.all([
         serverDataRequest('/api/data/assigned'),
         serverDataRequest('/api/data/submissions'),
@@ -452,21 +530,29 @@ function initMaterialBuilder() {
       localStorage.removeItem(STORAGE_KEYS.submissions);
       localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(state.serverMessages));
       state.serverDataLoaded = true;
+      syncActivePatientState();
+      populatePatientSelect();
     } catch (error) {
       console.warn('Kunde inte läsa behandlingsdata från servern:', error);
       state.serverAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
       state.serverSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
       state.serverMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
+      syncActivePatientState();
+      populatePatientSelect();
     }
   }
 
   document.addEventListener('kbtapp:auth-changed', async event => {
+    state.currentUser = event.detail?.user || null;
     if (event.detail?.loggedIn) {
       await loadServerCollections();
     } else {
+      state.availableClients = [];
       state.serverAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
       state.serverSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
       state.serverMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
+      syncActivePatientState();
+      populatePatientSelect();
     }
     renderSavedCollections();
     renderMessages();
@@ -578,13 +664,25 @@ function initMaterialBuilder() {
   }
 
   function ensureMessageThreads() {
-    if (Array.isArray(state.serverMessages) && state.serverMessages.length) return state.serverMessages;
+    const currentClientProfile = patientProfileFromUser(state.currentUser);
+    if (Array.isArray(state.serverMessages) && state.serverMessages.length) {
+      if (currentClientProfile && !state.serverMessages.some(item => item.patientId === currentClientProfile.id)) {
+        state.serverMessages.unshift(createMessageThread(currentClientProfile, []));
+      }
+      return state.serverMessages;
+    }
     const existing = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
     if (existing.length) {
       state.serverMessages = existing;
+      if (currentClientProfile && !state.serverMessages.some(item => item.patientId === currentClientProfile.id)) {
+        state.serverMessages.unshift(createMessageThread(currentClientProfile, []));
+      }
       return existing;
     }
     const seeded = seededMessageThreads();
+    if (currentClientProfile && !seeded.some(item => item.patientId === currentClientProfile.id)) {
+      seeded.unshift(createMessageThread(currentClientProfile, []));
+    }
     state.serverMessages = seeded;
     localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(seeded));
     return seeded;
@@ -617,7 +715,7 @@ function initMaterialBuilder() {
     const threads = getMessageThreads();
     let thread = threads.find(item => item.patientId === patientId);
     if (!thread) {
-      const patient = patients.find(item => item.id === patientId) || patients[0];
+      const patient = getKnownPatients().find(item => item.id === patientId) || createPatientProfile(patientId, patientLabel(patientId));
       thread = createMessageThread(patient, []);
       threads.unshift(thread);
     }
@@ -680,7 +778,8 @@ function initMaterialBuilder() {
   }
 
   function renderClientConversation() {
-    const thread = getMessageThreads().find(item => item.patientId === state.activeClientPatientId) || getMessageThreads()[0];
+    const clientPatientId = getCurrentClientPatientId();
+    const thread = getMessageThreads().find(item => item.patientId === clientPatientId) || getMessageThreads()[0];
     if (!thread) return;
     state.activeClientPatientId = thread.patientId;
     if (els.clientThreadTitle) els.clientThreadTitle.textContent = `Kontakt med ${thread.therapistName}`;
@@ -706,7 +805,7 @@ function initMaterialBuilder() {
   }
 
   function patientLabel(patientId) {
-    return patients.find(item => item.id === patientId)?.name || 'Patient';
+    return getKnownPatients().find(item => item.id === patientId)?.name || 'Patient';
   }
 
   function addBlock(type, beforeId = null) {
@@ -1220,7 +1319,7 @@ function initMaterialBuilder() {
     if (!state.blocks.length) {
       els.previewShell.innerHTML = '<div class="preview-block"><h4>Tom arbetsyta</h4><p>Lägg till minst ett block för att kunna förhandsvisa materialet.</p></div>';
     } else {
-      const patient = patients.find(item => item.id === state.assignedPatientId);
+      const patient = getKnownPatients().find(item => item.id === state.assignedPatientId);
       const intro = document.createElement('section');
       intro.className = 'preview-intro';
       intro.innerHTML = `
@@ -1257,7 +1356,7 @@ function initMaterialBuilder() {
   async function assignPatient() {
     state.assignedPatientId = els.patientSelect.value;
     state.activeClientPatientId = state.assignedPatientId;
-    const patient = patients.find(item => item.id === state.assignedPatientId);
+    const patient = getKnownPatients().find(item => item.id === state.assignedPatientId);
     const title = getMaterialTitle();
     const assignedEntry = {
       id: `assigned_${Date.now()}`,
@@ -1282,7 +1381,7 @@ function initMaterialBuilder() {
       showToast('Inget att spara', 'Arbetsytan är tom. Lägg till block först.');
       return;
     }
-    const patient = patients.find(item => item.id === state.assignedPatientId);
+    const patient = getKnownPatients().find(item => item.id === state.assignedPatientId);
     const title = getMaterialTitle();
     const entry = {
       id: `${kind}_${Date.now()}`,

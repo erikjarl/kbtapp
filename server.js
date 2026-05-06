@@ -184,6 +184,20 @@ async function handleApi(req, res, pathname) {
     return sendJson(res, 200, { ok: true });
   }
 
+  if (pathname === '/api/users') {
+    const sessionData = getSessionUser(req);
+    if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
+
+    if (req.method === 'GET') {
+      const requestUrl = new URL(req.url, `http://${req.headers.host}`);
+      const requestedRole = requestUrl.searchParams.get('role');
+      const users = sessionData.db.users
+        .filter(user => !requestedRole || user.role === requestedRole)
+        .map(publicUser);
+      return sendJson(res, 200, { users });
+    }
+  }
+
   if (pathname === '/api/data/assigned') {
     const sessionData = getSessionUser(req);
     if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
