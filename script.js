@@ -439,8 +439,12 @@ function initMaterialBuilder() {
     return createPatientProfile(`client_${user.id}`, user.name, user.id);
   }
 
+  function shouldPreferRegisteredClients() {
+    return state.currentUser?.role === 'therapist' && state.availableClients.length > 0;
+  }
+
   function getKnownPatients() {
-    const seedProfiles = patients.map(item => createPatientProfile(item.id, item.name));
+    const seedProfiles = shouldPreferRegisteredClients() ? [] : patients.map(item => createPatientProfile(item.id, item.name));
     const dynamicProfiles = state.availableClients.map(user => patientProfileFromUser(user)).filter(Boolean);
     const currentClientProfile = patientProfileFromUser(state.currentUser);
     const combined = [...seedProfiles, ...dynamicProfiles, ...(currentClientProfile ? [currentClientProfile] : [])];
@@ -453,7 +457,7 @@ function initMaterialBuilder() {
   }
 
   function getDefaultAssignedPatientId() {
-    return getKnownPatients()[0]?.id || patients[0].id;
+    return getKnownPatients()[0]?.id || '';
   }
 
   function getCurrentClientPatientId() {
@@ -496,6 +500,20 @@ function initMaterialBuilder() {
     if (!els.patientSelect) return;
     const knownPatients = getKnownPatients();
     els.patientSelect.innerHTML = '';
+
+    if (!knownPatients.length) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = state.currentUser?.role === 'therapist'
+        ? 'Inga registrerade patienter ännu'
+        : 'Ingen patient vald';
+      option.selected = true;
+      els.patientSelect.appendChild(option);
+      const confirmAssignButton = document.getElementById('confirm-assign');
+      if (confirmAssignButton) confirmAssignButton.disabled = true;
+      return;
+    }
+
     knownPatients.forEach(patient => {
       const option = document.createElement('option');
       option.value = patient.id;
@@ -503,6 +521,9 @@ function initMaterialBuilder() {
       option.selected = patient.id === state.assignedPatientId;
       els.patientSelect.appendChild(option);
     });
+
+    const confirmAssignButton = document.getElementById('confirm-assign');
+    if (confirmAssignButton) confirmAssignButton.disabled = false;
   }
 
   function getAssignedItems() {
@@ -561,6 +582,17 @@ function initMaterialBuilder() {
     return state.serverMessages;
   }
 
+  function buildAuthBackedThreads() {
+    if (state.currentUser?.role === 'therapist') {
+      return getKnownPatients().map(patient => createMessageThread(patient, [], { patientUserId: patient.userId || null }));
+    }
+    return [];
+  }
+
+  function isAuthBackedMessageThread(thread) {
+    return Boolean(thread?.patientUserId || thread?.therapistUserId || String(thread?.patientId || '').startsWith('client_'));
+  }
+
   async function loadServerCollections() {
     if (!getAuthToken()) return;
     try {
@@ -581,7 +613,8 @@ function initMaterialBuilder() {
       const libraryItems = Array.isArray(libraryResult?.items) ? libraryResult.items : [];
       const legacyAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
       const legacySubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
-      const legacyMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
+      const legacyMessagesRaw = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
+      const legacyMessages = legacyMessagesRaw.filter(isAuthBackedMessageThread);
       const legacyLibrary = JSON.parse(localStorage.getItem(STORAGE_KEYS.library) || '[]');
 
       state.serverAssigned = assignedItems.length ? assignedItems : legacyAssigned;
@@ -591,9 +624,13 @@ function initMaterialBuilder() {
         ? (libraryItems.length ? libraryItems : legacyLibrary)
         : [];
 
+      if (!state.serverMessages.length && getAuthToken()) {
+        state.serverMessages = buildAuthBackedThreads();
+      }
+
       if (!assignedItems.length && legacyAssigned.length) await saveAssignedItems(state.serverAssigned);
       if (!submissionItems.length && legacySubmissions.length) await saveSubmissionItems(state.serverSubmissions);
-      if (!messageItems.length && legacyMessages.length) await saveMessageThreads(state.serverMessages);
+      if (!messageItems.length && state.serverMessages.length) await saveMessageThreads(state.serverMessages);
       if (state.currentUser?.role === 'therapist' && !libraryItems.length && legacyLibrary.length) await saveLibraryItems(state.serverLibrary);
 
       localStorage.removeItem(STORAGE_KEYS.assigned);
@@ -754,6 +791,14 @@ function initMaterialBuilder() {
       }
       return existing;
     }
+
+    if (getAuthToken()) {
+      const authBackedThreads = buildAuthBackedThreads();
+      state.serverMessages = authBackedThreads;
+      localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(authBackedThreads));
+      return authBackedThreads;
+    }
+
     const seeded = seededMessageThreads();
     if (currentClientProfile && !seeded.some(item => item.patientId === currentClientProfile.id)) {
       seeded.unshift(createMessageThread(currentClientProfile, []));
@@ -818,8 +863,12 @@ function initMaterialBuilder() {
   function renderTherapistThreads() {
     if (!els.therapistThreadList) return;
     const threads = getMessageThreads();
+    if (!threads.length) {
+      els.therapistThreadList.innerHTML = '<div class="message-empty-state">Registrera ett patientkonto för att starta en riktig tråd här.</div>';
+      return;
+    }
     if (!threads.some(item => item.patientId === state.activeTherapistThreadPatientId)) {
-      state.activeTherapistThreadPatientId = threads[0]?.patientId || patients[0].id;
+      state.activeTherapistThreadPatientId = threads[0]?.patientId || '';
     }
     els.therapistThreadList.innerHTML = '';
     threads.forEach(thread => {
@@ -854,7 +903,7 @@ function initMaterialBuilder() {
     if (els.therapistThreadTitle) els.therapistThreadTitle.textContent = thread.patientName;
     if (els.therapistThreadSubtitle) els.therapistThreadSubtitle.textContent = `Säker tråd kopplad till ${thread.patientId}. Här kan terapeuten läsa och svara i samma flöde.`;
     if (els.therapistThreadStatus) els.therapistThreadStatus.textContent = `${thread.messages.length} meddelanden`;
-    renderMessageList(els.therapistMessageList, thread.messages, { viewer: 'therapist' });
+    renderMessageList(els.therapistMessageList, thread.messages, { viewer: 'therapist', thread });
   }
 
   function renderClientConversation() {
@@ -863,12 +912,12 @@ function initMaterialBuilder() {
     if (!thread) return;
     state.activeClientPatientId = thread.patientId;
     if (els.clientThreadTitle) els.clientThreadTitle.textContent = `Kontakt med ${thread.therapistName}`;
-    if (els.clientThreadSubtitle) els.clientThreadSubtitle.textContent = `${thread.patientName} kan skriva frågor, status och reflektioner här i ett enkelt första flöde.`;
+    if (els.clientThreadSubtitle) els.clientThreadSubtitle.textContent = `${thread.patientName} kan skriva frågor, status och reflektioner här i ett enkelt första flöde med ${thread.therapistName}.`;
     if (els.clientThreadStatus) els.clientThreadStatus.textContent = `Senast uppdaterad ${thread.messages.at(-1)?.timestamp || 'nyss'}`;
-    renderMessageList(els.clientMessageList, thread.messages, { viewer: 'client' });
+    renderMessageList(els.clientMessageList, thread.messages, { viewer: 'client', thread });
   }
 
-  function renderMessageList(target, messages, { viewer }) {
+  function renderMessageList(target, messages, { viewer, thread }) {
     if (!target) return;
     target.innerHTML = '';
     if (!messages.length) {
@@ -878,8 +927,10 @@ function initMaterialBuilder() {
     messages.forEach(message => {
       const bubble = document.createElement('div');
       const isOutgoing = (viewer === 'therapist' && message.author === 'therapist') || (viewer === 'client' && message.author === 'client');
+      const therapistLabel = thread?.therapistName || getCurrentTherapistIdentity().therapistName || 'Terapeut';
+      const patientName = thread?.patientName || patientLabel(state.activeClientPatientId);
       bubble.className = `chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`;
-      bubble.innerHTML = `${escapeHtml(message.text)}<small>${message.author === 'therapist' ? 'Dr. Lindgren' : patientLabel(state.activeClientPatientId)} · ${escapeHtml(message.timestamp)}</small>`;
+      bubble.innerHTML = `${escapeHtml(message.text)}<small>${escapeHtml(message.author === 'therapist' ? therapistLabel : patientName)} · ${escapeHtml(message.timestamp)}</small>`;
       target.appendChild(bubble);
     });
   }
@@ -1435,6 +1486,10 @@ function initMaterialBuilder() {
 
   async function assignPatient() {
     state.assignedPatientId = els.patientSelect.value;
+    if (!state.assignedPatientId) {
+      showToast('Ingen patient vald', 'Registrera först ett patientkonto och försök igen.');
+      return;
+    }
     state.activeClientPatientId = state.assignedPatientId;
     const patient = getKnownPatients().find(item => item.id === state.assignedPatientId);
     const title = getMaterialTitle();
@@ -1518,7 +1573,8 @@ function initMaterialBuilder() {
     if (!els.clientAssignmentsGrid) return;
     els.clientAssignmentsGrid.innerHTML = '';
     if (!assigned.length) {
-      els.clientAssignmentsGrid.innerHTML = '<div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Tom vy</span><h3>Inga tilldelade hemuppgifter ännu</h3></div></div><p>När terapeuten skickar material till Maja Svensson visas det här med tydlig status, öppna-knapp och möjlighet att skicka in svar.</p><div class="library-card-meta"><span>Lugn översikt</span><span>Tydliga nästa steg</span></div></div>';
+      const currentPatientName = getKnownPatients().find(item => item.id === state.activeClientPatientId)?.name || 'dig';
+      els.clientAssignmentsGrid.innerHTML = `<div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Tom vy</span><h3>Inga tilldelade hemuppgifter ännu</h3></div></div><p>När terapeuten skickar material till ${escapeHtml(currentPatientName)} visas det här med tydlig status, öppna-knapp och möjlighet att skicka in svar.</p><div class="library-card-meta"><span>Lugn översikt</span><span>Tydliga nästa steg</span></div></div>`;
       return;
     }
     assigned.forEach(item => {

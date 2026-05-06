@@ -128,18 +128,18 @@ function itemMatchesUserScope(item, user, collectionName) {
   if (!item || !user) return false;
 
   if (collectionName === 'library') {
-    return user.role === 'therapist' && (!item.therapistUserId || item.therapistUserId === user.id);
+    return user.role === 'therapist' && item.therapistUserId === user.id;
   }
 
   if (collectionName === 'messages') {
     if (user.role === 'therapist') {
-      return !item.therapistUserId || item.therapistUserId === user.id;
+      return item.therapistUserId === user.id;
     }
     return item.patientUserId === user.id || item.patientId === getClientPatientId(user);
   }
 
   if (user.role === 'therapist') {
-    return !item.therapistUserId || item.therapistUserId === user.id;
+    return item.therapistUserId === user.id;
   }
 
   return item.patientUserId === user.id || item.patientId === getClientPatientId(user);

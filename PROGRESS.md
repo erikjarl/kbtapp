@@ -575,3 +575,40 @@
 ### Nästa steg
 - Nästa rimliga tydliga del är att koppla patientens `Mitt material` till verkligt tilldelat/sparat servermaterial så samma objektkedja känns mer sammanhållen
 - Alternativt flytta mallbiblioteket till backend och scopea även mallar per terapeut för att göra byggarflödet helt kontoanknutet
+
+## 2026-05-06 — Rensat bort demo-läckage i auth-backat patientflöde
+
+### Vad jag arbetade med
+- En avgränsad del: första riktiga auth-backade terapeut–patientflödet runt patientval och meddelandetrådar
+- Målet var att göra registrerade konton mindre förvirrande i praktiken genom att stoppa att demo/seedad data blandas in när man väl loggat in med riktiga användare
+
+### Vad jag ändrade
+- Gjorde så att inloggad terapeut med registrerade klientkonton prioriterar dessa i patientväljaren i stället för seedade demopatienter
+- Lade till tomt läge i patientväljaren om inga registrerade patienter finns, samt blockerad tilldelning utan vald patient
+- Slutade migrera seedade/anonyma lokala meddelandetrådar in i inloggade auth-sessioner
+- Initierar nu auth-backade terapeuttrådar mer deterministiskt när serverdata laddas
+- Skärpte backend-scope i `server.js` så oscope:ad äldre demo-data inte längre visas för inloggade terapeuter i `messages`, `assigned`, `submissions` och `library`
+- Slutade autoskapa tom klienttråd med standardterapeuten `Dr. Lindgren` före verklig relation finns
+- Gjorde meddelandebubblor patientnära genom att visa faktisk `therapistName` från tråden i stället för hårdkodat namn
+- Lade till riktat Playwright-test `playwright-auth-backed-patient-flow.js`
+- Sparade nya QA-skärmdumpar i `qa-artifacts/auth-backed-patient-flow-desktop.png` och `qa-artifacts/auth-backed-patient-flow-mobile.png`
+
+### Vad som nu fungerar
+- Registrerade patienter visas utan seedade `pt_*`-demoposter i terapeutens tilldelningsväljare i det auth-backade flödet
+- Inloggad terapeut slipper se seedade patienttrådar som `Maja Svensson` i det riktiga meddelandeflödet
+- Patienten ser nu rätt terapeutfokus i kontaktvyn när en verklig terapeut tilldelat material och skickat meddelande
+- Meddelandebubblor visar nu terapeutens riktiga namn i stället för alltid `Dr. Lindgren`
+- Praktiskt test verifierade:
+  - desktop 1440×900: registrera terapeut + patient → välj registrerad patient i tilldelning → öppna meddelanden → seedade trådar syns inte → skicka meddelande från terapeuten
+  - mobil 390×844: logga in som samma patient → öppna kontaktvyn → rätt terapeutfokus och terapeutnamn syns i tråden
+  - fortsatt auth-smoke-test passerar för registrering/inloggning på desktop och mobil
+- `node --check server.js && node --check script.js && node --check playwright-auth-backed-patient-flow.js && node --check playwright-auth-check.js` passerar
+
+### Vad som inte fungerar
+- Registrerade klientkonton listas fortfarande globalt för terapeuter via `/api/users?role=client`; det finns ännu ingen explicit terapeut–patientkoppling som begränsar urvalet till "mina patienter"
+- Äldre oscope:ad data finns fortfarande kvar i JSON-databasen historiskt, men visas inte längre i det här auth-backade terapeutflödet efter scope-skärpningen
+- Browser-verktyget användes inte heller i denna körning; praktisk verifiering gjordes med lokal Playwright mot Node-server på port `4311`
+
+### Nästa steg
+- Nästa rimliga tydliga del är att bygga en enkel explicit terapeut–patientkoppling i backend så patienturval, trådar, tilldelningar och inskick kan begränsas till riktiga relationer i stället för alla registrerade klientkonton
+- Alternativt koppla patientens `Mitt material` till verkligt tilldelat servermaterial så hela kedjan terapeut → tilldelning → patientmaterial blir ännu mer sammanhängande
