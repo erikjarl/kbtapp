@@ -24,7 +24,7 @@ const MIME_TYPES = {
 function ensureDb() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(DB_PATH)) {
-    fs.writeFileSync(DB_PATH, JSON.stringify({ users: [], sessions: [], assigned: [], submissions: [], messages: [], library: [] }, null, 2));
+    fs.writeFileSync(DB_PATH, JSON.stringify({ users: [], sessions: [], assigned: [], submissions: [], messages: [], library: [], relationships: [] }, null, 2));
   }
 }
 
@@ -37,6 +37,7 @@ function readDb() {
   db.submissions = Array.isArray(db.submissions) ? db.submissions : [];
   db.messages = Array.isArray(db.messages) ? db.messages : [];
   db.library = Array.isArray(db.library) ? db.library : [];
+  db.relationships = Array.isArray(db.relationships) ? db.relationships : [];
   return db;
 }
 
@@ -118,6 +119,35 @@ function publicUser(user) {
     role: user.role,
     createdAt: user.createdAt
   };
+}
+
+function getLinkedClientUserIds(db, therapistUserId) {
+  return new Set(
+    (db.relationships || [])
+      .filter(item => item?.therapistUserId === therapistUserId && item?.clientUserId)
+      .map(item => item.clientUserId)
+  );
+}
+
+function getRelationshipRecord(db, therapistUserId, clientUserId) {
+  return (db.relationships || []).find(item => item.therapistUserId === therapistUserId && item.clientUserId === clientUserId) || null;
+}
+
+function createRelationship(db, therapist, client) {
+  if (!db.relationships) db.relationships = [];
+  const existing = getRelationshipRecord(db, therapist.id, client.id);
+  if (existing) return existing;
+
+  const relationship = {
+    id: `rel_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    therapistUserId: therapist.id,
+    therapistName: therapist.name,
+    clientUserId: client.id,
+    clientName: client.name,
+    createdAt: new Date().toISOString()
+  };
+  db.relationships.push(relationship);
+  return relationship;
 }
 
 function getClientPatientId(user) {
@@ -228,10 +258,54 @@ async function handleApi(req, res, pathname) {
     if (req.method === 'GET') {
       const requestUrl = new URL(req.url, `http://${req.headers.host}`);
       const requestedRole = requestUrl.searchParams.get('role');
-      const users = sessionData.db.users
-        .filter(user => !requestedRole || user.role === requestedRole)
-        .map(publicUser);
+      const includeUnlinked = requestUrl.searchParams.get('includeUnlinked') === '1';
+      let users = sessionData.db.users.filter(user => !requestedRole || user.role === requestedRole);
+
+      if (sessionData.user.role === 'therapist' && requestedRole === 'client' && !includeUnlinked) {
+        const linkedIds = getLinkedClientUserIds(sessionData.db, sessionData.user.id);
+        users = users.filter(user => linkedIds.has(user.id));
+      }
+
+      users = users.map(publicUser);
       return sendJson(res, 200, { users });
+    }
+  }
+
+  if (pathname === '/api/relationships/clients') {
+    const sessionData = getSessionUser(req);
+    if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
+    if (sessionData.user.role !== 'therapist') {
+      return sendJson(res, 403, { error: 'Endast terapeuter kan hantera patientkopplingar.' });
+    }
+
+    if (req.method === 'GET') {
+      const linkedIds = getLinkedClientUserIds(sessionData.db, sessionData.user.id);
+      const linkedClients = sessionData.db.users
+        .filter(user => user.role === 'client' && linkedIds.has(user.id))
+        .map(publicUser);
+      return sendJson(res, 200, { linkedClients });
+    }
+
+    if (req.method === 'POST') {
+      const body = await parseBody(req);
+      const clientUserId = String(body.clientUserId || '').trim();
+      const clientEmail = String(body.clientEmail || '').trim().toLowerCase();
+      if (!clientUserId && !clientEmail) {
+        return sendJson(res, 400, { error: 'clientUserId eller clientEmail krävs.' });
+      }
+
+      const client = sessionData.db.users.find(user => {
+        if (user.role !== 'client') return false;
+        if (clientUserId) return user.id === clientUserId;
+        return user.email === clientEmail;
+      });
+      if (!client) {
+        return sendJson(res, 404, { error: 'Patientkontot hittades inte.' });
+      }
+
+      const relationship = createRelationship(sessionData.db, sessionData.user, client);
+      writeDb(sessionData.db);
+      return sendJson(res, 201, { relationship, client: publicUser(client) });
     }
   }
 

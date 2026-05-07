@@ -610,5 +610,42 @@
 - Browser-verktyget användes inte heller i denna körning; praktisk verifiering gjordes med lokal Playwright mot Node-server på port `4311`
 
 ### Nästa steg
-- Nästa rimliga tydliga del är att bygga en enkel explicit terapeut–patientkoppling i backend så patienturval, trådar, tilldelningar och inskick kan begränsas till riktiga relationer i stället för alla registrerade klientkonton
+- Hög prioritet: säkerställ ett långsiktigt fungerande backendflöde för verkliga användare så att registrering, inloggning och lagring av användare/lösenord är robust och blir en stabil grund för fortsatt arbete
+- Därefter är nästa rimliga tydliga del att bygga en enkel explicit terapeut–patientkoppling i backend så patienturval, trådar, tilldelningar och inskick kan begränsas till riktiga relationer i stället för alla registrerade klientkonton
 - Alternativt koppla patientens `Mitt material` till verkligt tilldelat servermaterial så hela kedjan terapeut → tilldelning → patientmaterial blir ännu mer sammanhängande
+
+## 2026-05-07 — Explicit terapeut–patientkoppling i auth-backad tilldelning
+
+### Vad jag arbetade med
+- En avgränsad del: hur en inloggad terapeut väljer patienter i det riktiga auth-backade flödet
+- Målet var att ta bort den sista globala patientlistelogiken och ersätta den med en enkel explicit koppling mellan terapeut och patientkonto
+
+### Vad jag ändrade
+- Skärpte `server.js` så `GET /api/relationships/clients` nu bara returnerar redan länkade patientkonton för aktuell terapeut
+- Utökade `POST /api/relationships/clients` så terapeuten kan länka en patient antingen via `clientUserId` eller via registrerad e-postadress (`clientEmail`)
+- Byggde om tilldelningsmodalen i `index.html` så den nu visar `Länkad patient` i stället för en implicit global patientlista
+- Lade till enkel UI för att länka registrerad patient via e-post direkt i samma modal
+- Ändrade `script.js` så inloggad terapeut inte längre får seedade demopatienter eller globala `availableClients` i det auth-backade valet
+- Gjorde så att länkade patienter blir den enda källan för terapeutens verkliga patientlista, trådar och tilldelningsval i detta flöde
+- Uppdaterade Playwright-testet `playwright-auth-backed-patient-flow.js` så det först verifierar tom länkad lista, sedan länkar patient via e-post och därefter tilldelar material
+- Sparade uppdaterade QA-skärmdumpar i `qa-artifacts/auth-backed-patient-flow-desktop.png` och `qa-artifacts/auth-backed-patient-flow-mobile.png`
+
+### Vad som nu fungerar
+- En ny terapeut börjar nu utan global patientlista i det auth-backade tilldelningsflödet
+- Terapeuten kan länka en verkligt registrerad patient via e-post och därefter tilldela material till just den relationen
+- Seedade `pt_*`-demopatienter visas inte längre i terapeutens riktiga patientväljare när terapeuten är inloggad
+- Terapeutens meddelandetrådar och tilldelningar fortsätter att följa länkade riktiga relationer i stället för ett öppet urval av alla klientkonton
+- Praktiskt test verifierade:
+  - desktop 1440×900: registrera terapeut → registrera patient → logga in som terapeut → öppna tilldelning → se `Inga länkade patienter ännu` → länka patient via e-post → tilldela material → öppna meddelanden och se rätt tråd
+  - mobil 390×844: logga in som samma patient → öppna kontaktvyn och se rätt terapeutfokus med skickat meddelande
+- `node --check server.js && node --check script.js && node --check playwright-auth-backed-patient-flow.js` passerar
+- Praktisk end-to-end-körning passerade med lokal Node-server på port `4320`
+
+### Vad som inte fungerar
+- Det finns fortfarande ingen separat inbjudningsprocess, godkännandeflöde eller självservice för att acceptera en terapeutkoppling; länken skapas direkt när terapeuten anger en registrerad patientadress
+- Historisk testdata i `data/auth-db.json` ligger kvar lokalt från tidigare körningar även om det nya flödet nu använder tydligare relationsscope
+- Browser-verktyget användes inte heller i denna körning; praktisk verifiering gjordes med lokal Playwright mot systemets Chrome
+
+### Nästa steg
+- Nästa rimliga tydliga del är att låta patientens `Mitt material` bygga på verkligt serverpersistat och tilldelat material i stället för seedad klientdata
+- Alternativt bygga vidare på relationen med en liten `mina patienter`-översikt i terapeutvyn, så länkade konton blir synliga även utanför tilldelningsmodalen

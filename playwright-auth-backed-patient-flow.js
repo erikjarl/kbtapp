@@ -54,9 +54,18 @@ async function logout(page) {
   await therapistPage.locator('#assign-patient').click();
   await therapistPage.locator('#patient-select').waitFor();
 
+  const initialPatientOptions = await therapistPage.locator('#patient-select option').evaluateAll(options => options.map(option => option.textContent.trim()));
+  if (!initialPatientOptions.some(option => option.includes('Inga länkade patienter ännu'))) {
+    throw new Error(`Terapeuten ska börja utan globala patientkonton i väljaren: ${initialPatientOptions.join(', ')}`);
+  }
+
+  await therapistPage.locator('#link-client-email').fill(clientEmail);
+  await therapistPage.locator('#link-client-button').click();
+  await therapistPage.locator('#link-client-feedback').getByText(clientName).waitFor();
+
   const patientOptions = await therapistPage.locator('#patient-select option').evaluateAll(options => options.map(option => option.textContent.trim()));
   if (!patientOptions.some(option => option.includes(clientName))) {
-    throw new Error(`Registrerad patient saknas i väljaren: ${clientName}`);
+    throw new Error(`Länkad patient saknas i väljaren: ${clientName}`);
   }
   if (patientOptions.some(option => option.includes('(pt_'))) {
     throw new Error(`Seedade demopatienter visas fortfarande i auth-backed väljaren: ${patientOptions.join(', ')}`);

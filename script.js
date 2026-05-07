@@ -305,7 +305,7 @@ function initMaterialBuilder() {
     serverLibrary: [],
     serverDataLoaded: false,
     currentUser: null,
-    availableClients: []
+    linkedClients: []
   };
 
   const collapsedTypes = new Set(['rating', 'textfield', 'table', 'emoji', 'info']);
@@ -440,12 +440,15 @@ function initMaterialBuilder() {
   }
 
   function shouldPreferRegisteredClients() {
-    return state.currentUser?.role === 'therapist' && state.availableClients.length > 0;
+    return state.currentUser?.role === 'therapist';
   }
 
   function getKnownPatients() {
     const seedProfiles = shouldPreferRegisteredClients() ? [] : patients.map(item => createPatientProfile(item.id, item.name));
-    const dynamicProfiles = state.availableClients.map(user => patientProfileFromUser(user)).filter(Boolean);
+    const dynamicProfiles = state.linkedClients
+      .map(user => ({ ...user, isLinked: true }))
+      .map(user => patientProfileFromUser(user))
+      .filter(Boolean);
     const currentClientProfile = patientProfileFromUser(state.currentUser);
     const combined = [...seedProfiles, ...dynamicProfiles, ...(currentClientProfile ? [currentClientProfile] : [])];
     const seen = new Set();
@@ -482,18 +485,64 @@ function initMaterialBuilder() {
 
   async function loadAvailableClients() {
     if (!getAuthToken()) {
-      state.availableClients = [];
+      state.linkedClients = [];
       syncActivePatientState();
       return;
     }
     try {
-      const result = await serverDataRequest('/api/users?role=client');
-      state.availableClients = Array.isArray(result.users) ? result.users : [];
+      if (state.currentUser?.role === 'therapist') {
+        const result = await serverDataRequest('/api/relationships/clients');
+        state.linkedClients = Array.isArray(result.linkedClients) ? result.linkedClients : [];
+      } else {
+        state.linkedClients = [];
+      }
     } catch (error) {
       console.warn('Kunde inte läsa klientkonton från servern:', error);
-      state.availableClients = [];
+      state.linkedClients = [];
     }
     syncActivePatientState();
+  }
+
+  async function ensureTherapistClientRelationship(patient) {
+    if (!patient?.userId || state.currentUser?.role !== 'therapist') return;
+    const alreadyLinked = state.linkedClients.some(user => user.id === patient.userId);
+    if (alreadyLinked) return;
+    await serverDataRequest('/api/relationships/clients', { clientUserId: patient.userId }, 'POST');
+    await loadAvailableClients();
+    populatePatientSelect();
+  }
+
+  function setLinkClientFeedback(message, tone = 'neutral') {
+    const feedback = document.getElementById('link-client-feedback');
+    if (!feedback) return;
+    feedback.textContent = message;
+    feedback.dataset.tone = tone;
+  }
+
+  async function linkClientByEmail() {
+    const input = document.getElementById('link-client-email');
+    const button = document.getElementById('link-client-button');
+    const email = String(input?.value || '').trim().toLowerCase();
+    if (!email) {
+      setLinkClientFeedback('Fyll i patientens registrerade e-postadress först.', 'error');
+      return;
+    }
+
+    if (button) button.disabled = true;
+    setLinkClientFeedback('Länkar patientkonto…', 'neutral');
+    try {
+      const result = await serverDataRequest('/api/relationships/clients', { clientEmail: email }, 'POST');
+      await loadAvailableClients();
+      state.assignedPatientId = `client_${result.client.id}`;
+      populatePatientSelect();
+      if (input) input.value = '';
+      setLinkClientFeedback(`${result.client.name} är nu länkad till dig.`, 'success');
+      showToast('Patient länkad', result.client.name);
+    } catch (error) {
+      setLinkClientFeedback(error.message || 'Kunde inte länka patienten.', 'error');
+    } finally {
+      if (button) button.disabled = false;
+    }
   }
 
   function populatePatientSelect() {
@@ -505,7 +554,7 @@ function initMaterialBuilder() {
       const option = document.createElement('option');
       option.value = '';
       option.textContent = state.currentUser?.role === 'therapist'
-        ? 'Inga registrerade patienter ännu'
+        ? 'Inga länkade patienter ännu'
         : 'Ingen patient vald';
       option.selected = true;
       els.patientSelect.appendChild(option);
@@ -514,10 +563,15 @@ function initMaterialBuilder() {
       return;
     }
 
+    const linkedClientIds = new Set(state.linkedClients.map(user => user.id));
     knownPatients.forEach(patient => {
       const option = document.createElement('option');
       option.value = patient.id;
-      option.textContent = patient.id.startsWith('client_') ? `${patient.name} (registrerat konto)` : `${patient.name} (${patient.id})`;
+      const isRegisteredClient = patient.id.startsWith('client_');
+      const isLinkedRegisteredClient = isRegisteredClient && patient.userId && linkedClientIds.has(patient.userId);
+      option.textContent = isRegisteredClient
+        ? `${patient.name} (${isLinkedRegisteredClient ? 'min patient' : 'patient'})`
+        : `${patient.name} (${patient.id})`;
       option.selected = patient.id === state.assignedPatientId;
       els.patientSelect.appendChild(option);
     });
@@ -658,7 +712,6 @@ function initMaterialBuilder() {
     if (event.detail?.loggedIn) {
       await loadServerCollections();
     } else {
-      state.availableClients = [];
       state.serverAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
       state.serverSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
       state.serverMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
@@ -691,6 +744,7 @@ function initMaterialBuilder() {
       openModal(els.assignModal);
     });
     document.getElementById('confirm-assign').addEventListener('click', assignPatient);
+    document.getElementById('link-client-button')?.addEventListener('click', linkClientByEmail);
 
     const openSettings = document.getElementById('open-settings');
     const closeSettings = document.getElementById('close-settings');
@@ -1492,6 +1546,7 @@ function initMaterialBuilder() {
     }
     state.activeClientPatientId = state.assignedPatientId;
     const patient = getKnownPatients().find(item => item.id === state.assignedPatientId);
+    await ensureTherapistClientRelationship(patient);
     const title = getMaterialTitle();
     const therapistIdentity = getCurrentTherapistIdentity();
     const assignedEntry = {
