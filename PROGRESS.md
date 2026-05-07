@@ -691,6 +691,52 @@
 - Nästa rimliga tydliga del är att låta patientens `Mitt material` bygga på verkligt serverpersistat och tilldelat material i stället för seedad klientdata
 - Alternativt bygga vidare på relationen med en liten `mina patienter`-översikt i terapeutvyn, så länkade konton blir synliga även utanför tilldelningsmodalen
 
+## 2026-05-07 — Verkliga dashboardkort via serveraggregerad terapeutsummary
+
+### Vad jag arbetade med
+- En avgränsad del: terapeutdashboardens översta översiktskort och fokusyta
+- Målet var att sluta visa hårdkodade demosiffror där och i stället låta dashboarden bygga på samma auth-backade backenddata som resten av appen
+
+### Vad jag ändrade
+- Lade till en ny auth-skyddad backend-endpoint `GET /api/dashboard/therapist-summary`
+- Lät servern aggregera verkliga värden för:
+  - länkade/aktiva patienter
+  - tilldelade material
+  - trådar där patienten senast skrivit och terapeuten ännu inte svarat
+  - inskick som väntar återkoppling
+  - senaste aktivitet från tilldelningar, inskick och meddelanden
+- Bytte ut hårdkodade toppkort i dashboarden mot verkliga kort med ids och frontendrendering för servervärden
+- Gjorde fokuspanelen `I fokus nu` dynamisk så den ändrar rubrik, copy och mini-timeline utifrån faktisk auth-backad status
+- Bytte sektionen `Senaste aktivitet` från statisk demotext till serverdriven aktivitetslista
+- Lade till frontendstöd i `script.js` för att läsa, spara och återrendera dashboardsammanfattningen efter relevanta ändringar som:
+  - länka patient
+  - tilldela material
+  - skicka meddelande
+  - skicka in uppgift
+  - markera/granska inskick
+- Uppdaterade riktat Playwright-test `playwright-dashboard-overview-check.js`
+- Sparade uppdaterade QA-skärmdumpar i `qa-artifacts/dashboard-overview-desktop.png` och `qa-artifacts/dashboard-overview-mobile.png`
+- Uppdaterade login-sidans synliga tidsstämpel enligt projektregeln
+
+### Vad som nu fungerar
+- Terapeutdashboardens toppkort visar nu verkliga auth-backade siffror i stället för fasta demoantal
+- Dashboardens fokusyta lyfter nu fram ett rimligt nästa steg beroende på faktisk status i terapeutens konto
+- `Senaste aktivitet` bygger nu på riktiga tilldelningar, meddelanden och inskick
+- Praktiskt test verifierade:
+  - desktop 1440×900: registrera terapeut → registrera patient → länka patient → tilldela material → öppna dashboard och se att `Aktiva patienter`, `Tilldelade material`, patientöversikten och `Senaste aktivitet` uppdateras auth-backat
+  - mobil 390×844: logga in som samma patient → öppna `Mitt material` och verifiera att det tilldelade auth-backade materialet fortfarande syns
+- `node --check server.js && node --check script.js && node --check playwright-dashboard-overview-check.js` passerar
+- Riktad Playwright-körning passerade mot lokal Node-server på port `4330`
+
+### Vad som inte fungerar
+- Dashboardsammanfattningen är fortfarande enkel och bygger ännu inte på verkliga bokningar, läskvitton eller en separat notifieringsmodell
+- `Nya händelser` är fortfarande en lättviktig sammanräkning av backendflöden och inte en full historik- eller inboxmodell
+- Browser-verktyget användes inte heller i denna körning; praktisk verifiering gjordes med lokal Playwright mot Node-server
+
+### Nästa steg
+- Nästa rimliga tydliga del är att göra terapeutdashboardens återstående statiska delar verkliga också, särskilt `Nästa bokade tider` eller en enklare `att göra nu`-lista som helt bygger på auth-backad aktivitet
+- Alternativt gå ett steg djupare i backendspåret och lägga till enkel läst/svarad-status för meddelandetrådar så `väntar svar` blir mer träffsäkert
+
 ## 2026-05-07 — Enkel auth-backad “Mina patienter”-översikt i terapeutdashboard
 
 ### Vad jag arbetade med

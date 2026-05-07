@@ -154,6 +154,17 @@ function getClientPatientId(user) {
   return user?.role === 'client' ? `client_${user.id}` : '';
 }
 
+function getTimestamp(value) {
+  if (!value) return 0;
+  const normalized = String(value).replace(' ', 'T');
+  const direct = Date.parse(normalized);
+  if (!Number.isNaN(direct)) return direct;
+  const match = String(value).match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!match) return 0;
+  const [, year, month, day, hour, minute, second = '00'] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)).getTime();
+}
+
 function itemMatchesUserScope(item, user, collectionName) {
   if (!item || !user) return false;
 
@@ -386,6 +397,78 @@ async function handleApi(req, res, pathname) {
       writeDb(sessionData.db);
       return sendJson(res, 200, { ok: true, items: getScopedItems(sessionData.db, sessionData.user, 'library') });
     }
+  }
+
+  if (pathname === '/api/dashboard/therapist-summary') {
+    const sessionData = getSessionUser(req);
+    if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
+    if (sessionData.user.role !== 'therapist') {
+      return sendJson(res, 403, { error: 'Endast terapeuter kan se dashboardöversikten.' });
+    }
+    if (req.method !== 'GET') {
+      return sendJson(res, 405, { error: 'Method not allowed' });
+    }
+
+    const linkedClients = sessionData.db.users
+      .filter(user => user.role === 'client' && getLinkedClientUserIds(sessionData.db, sessionData.user.id).has(user.id))
+      .map(publicUser);
+    const assignedItems = getScopedItems(sessionData.db, sessionData.user, 'assigned');
+    const submissions = getScopedItems(sessionData.db, sessionData.user, 'submissions');
+    const threads = getScopedItems(sessionData.db, sessionData.user, 'messages');
+
+    const activePatientIds = new Set();
+    linkedClients.forEach(client => activePatientIds.add(`client_${client.id}`));
+    assignedItems.forEach(item => item?.patientId && activePatientIds.add(item.patientId));
+    submissions.forEach(item => item?.patientId && activePatientIds.add(item.patientId));
+    threads.forEach(item => item?.patientId && activePatientIds.add(item.patientId));
+
+    const pendingSubmissions = submissions.filter(item => (item?.status || 'inskickad') === 'inskickad');
+    const recentAssignments = assignedItems.filter(item => getTimestamp(item?.createdAt) > 0);
+    const unreadMessageThreads = threads.filter(thread => {
+      const messages = Array.isArray(thread?.messages) ? thread.messages : [];
+      const latestClientTs = Math.max(0, ...messages.filter(msg => msg?.author === 'client').map(msg => getTimestamp(msg.timestamp)));
+      const latestTherapistTs = Math.max(0, ...messages.filter(msg => msg?.author === 'therapist').map(msg => getTimestamp(msg.timestamp)));
+      return latestClientTs > latestTherapistTs;
+    });
+
+    const recentActivity = [];
+    assignedItems.forEach(item => recentActivity.push({
+      type: 'assigned',
+      title: 'Material tilldelat',
+      detail: `${item.patientName || 'Patient'} · ${item.title || 'Utan titel'}`,
+      timestamp: item.createdAt || ''
+    }));
+    submissions.forEach(item => recentActivity.push({
+      type: item.status === 'granskad' ? 'reviewed' : 'submitted',
+      title: item.status === 'granskad' ? 'Inskick granskat' : 'Hemuppgift inskickad',
+      detail: `${item.patientName || 'Patient'} · ${item.title || 'Utan titel'}`,
+      timestamp: item.reviewedAt || item.submittedAt || ''
+    }));
+    threads.forEach(thread => {
+      const messages = Array.isArray(thread?.messages) ? thread.messages : [];
+      const latestMessage = [...messages].sort((a, b) => getTimestamp(b.timestamp) - getTimestamp(a.timestamp))[0];
+      if (!latestMessage) return;
+      recentActivity.push({
+        type: latestMessage.author === 'client' ? 'client-message' : 'therapist-message',
+        title: latestMessage.author === 'client' ? 'Nytt patientmeddelande' : 'Senaste terapeutsvar',
+        detail: `${thread.patientName || 'Patient'} · ${String(latestMessage.text || '').trim() || 'Meddelande'}`,
+        timestamp: latestMessage.timestamp || ''
+      });
+    });
+
+    recentActivity.sort((a, b) => getTimestamp(b.timestamp) - getTimestamp(a.timestamp));
+
+    return sendJson(res, 200, {
+      summary: {
+        linkedPatients: linkedClients.length,
+        activePatients: activePatientIds.size,
+        pendingSubmissions: pendingSubmissions.length,
+        unreadThreads: unreadMessageThreads.length,
+        newEvents: pendingSubmissions.length + unreadMessageThreads.length + recentAssignments.length,
+        assignedCount: assignedItems.length,
+        recentActivity: recentActivity.slice(0, 3)
+      }
+    });
   }
 
   return sendJson(res, 404, { error: 'Not found' });

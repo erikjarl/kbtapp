@@ -1,7 +1,7 @@
 const { chromium, devices } = require('playwright');
 
 const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const baseUrl = process.env.KBTAPP_BASE_URL || 'http://127.0.0.1:4322';
+const baseUrl = process.env.KBTAPP_BASE_URL || 'http://127.0.0.1:4330';
 const password = 'hemligt123';
 
 async function register(page, role, name, email) {
@@ -59,8 +59,13 @@ async function logout(page) {
 
   await desktop.locator('#therapist-nav .nav-item[data-page="dashboard"]').click();
   await desktop.locator('#therapist-patient-overview-list').getByText(clientName).waitFor();
+  await desktop.locator('#dashboard-recent-activity-list').getByText('Material tilldelat').waitFor();
   const summaryText = await desktop.locator('#therapist-patient-overview-summary').textContent();
   const overviewText = await desktop.locator('#therapist-patient-overview-list').textContent();
+  const eventsStat = await desktop.locator('#dashboard-stat-events').textContent();
+  const patientsStat = await desktop.locator('#dashboard-stat-patients').textContent();
+  const assignedStat = await desktop.locator('#dashboard-stat-assigned').textContent();
+  const recentActivityText = await desktop.locator('#dashboard-recent-activity-list').textContent();
 
   if (!summaryText.includes('1 länkade patienter')) {
     throw new Error(`Fel sammanfattning i terapeutöversikten: ${summaryText}`);
@@ -70,6 +75,18 @@ async function logout(page) {
   }
   if (!overviewText.includes('Aktiv behandlingskontakt')) {
     throw new Error(`Status saknas i patientöversikten: ${overviewText}`);
+  }
+  if (Number(eventsStat || '0') < 1) {
+    throw new Error(`Förväntade minst 1 ny händelse, fick: ${eventsStat}`);
+  }
+  if (patientsStat !== '1') {
+    throw new Error(`Förväntade 1 aktiv patient, fick: ${patientsStat}`);
+  }
+  if (assignedStat !== '1') {
+    throw new Error(`Förväntade 1 tilldelat material, fick: ${assignedStat}`);
+  }
+  if (!recentActivityText.includes('Material tilldelat')) {
+    throw new Error(`Senaste aktivitet saknar tilldelning: ${recentActivityText}`);
   }
 
   await desktop.locator('#therapist-patient-overview-list').getByRole('button', { name: 'Öppna tråd' }).click();

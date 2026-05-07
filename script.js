@@ -303,6 +303,7 @@ function initMaterialBuilder() {
     serverSubmissions: [],
     serverMessages: [],
     serverLibrary: [],
+    serverDashboardSummary: null,
     serverDataLoaded: false,
     currentUser: null,
     linkedClients: []
@@ -534,6 +535,7 @@ function initMaterialBuilder() {
     try {
       const result = await serverDataRequest('/api/relationships/clients', { clientEmail: email }, 'POST');
       await loadAvailableClients();
+      await loadDashboardSummary();
       state.assignedPatientId = `client_${result.client.id}`;
       populatePatientSelect();
       if (input) input.value = '';
@@ -648,6 +650,22 @@ function initMaterialBuilder() {
     return Boolean(thread?.patientUserId || thread?.therapistUserId || String(thread?.patientId || '').startsWith('client_'));
   }
 
+  async function loadDashboardSummary() {
+    if (!getAuthToken() || state.currentUser?.role !== 'therapist') {
+      state.serverDashboardSummary = null;
+      return null;
+    }
+    try {
+      const result = await serverDataRequest('/api/dashboard/therapist-summary');
+      state.serverDashboardSummary = result?.summary || null;
+      return state.serverDashboardSummary;
+    } catch (error) {
+      console.warn('Kunde inte läsa dashboardsammanfattning från servern:', error);
+      state.serverDashboardSummary = null;
+      return null;
+    }
+  }
+
   async function loadServerCollections() {
     if (!getAuthToken()) return;
     try {
@@ -659,8 +677,9 @@ function initMaterialBuilder() {
       ];
       if (state.currentUser?.role === 'therapist') {
         requests.push(serverDataRequest('/api/data/library'));
+        requests.push(serverDataRequest('/api/dashboard/therapist-summary'));
       }
-      const [assignedResult, submissionsResult, messagesResult, libraryResult] = await Promise.all(requests);
+      const [assignedResult, submissionsResult, messagesResult, libraryResult, dashboardResult] = await Promise.all(requests);
 
       const assignedItems = Array.isArray(assignedResult.items) ? assignedResult.items : [];
       const submissionItems = Array.isArray(submissionsResult.items) ? submissionsResult.items : [];
@@ -678,6 +697,9 @@ function initMaterialBuilder() {
       state.serverLibrary = state.currentUser?.role === 'therapist'
         ? (libraryItems.length ? libraryItems : legacyLibrary)
         : [];
+      state.serverDashboardSummary = state.currentUser?.role === 'therapist'
+        ? (dashboardResult?.summary || null)
+        : null;
 
       if (!state.serverMessages.length && getAuthToken()) {
         state.serverMessages = buildAuthBackedThreads();
@@ -703,6 +725,7 @@ function initMaterialBuilder() {
       state.serverSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
       state.serverMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
       state.serverLibrary = JSON.parse(localStorage.getItem(STORAGE_KEYS.library) || '[]');
+      state.serverDashboardSummary = null;
       syncActivePatientState();
       populatePatientSelect();
     }
@@ -717,6 +740,7 @@ function initMaterialBuilder() {
       state.serverSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
       state.serverMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
       state.serverLibrary = JSON.parse(localStorage.getItem(STORAGE_KEYS.library) || '[]');
+      state.serverDashboardSummary = null;
       syncActivePatientState();
       populatePatientSelect();
     }
@@ -903,6 +927,7 @@ function initMaterialBuilder() {
     thread.messages.push(createMessage(author, text));
     try {
       await saveMessageThreads(threads);
+      await loadDashboardSummary();
       renderSavedCollections();
       renderDashboardOverview();
       renderMessages();
@@ -1581,6 +1606,7 @@ function initMaterialBuilder() {
       await saveMessageThreads(threads);
     }
 
+    await loadDashboardSummary();
     renderSavedCollections();
     renderDashboardOverview();
     renderMessages();
@@ -1628,7 +1654,79 @@ function initMaterialBuilder() {
     renderTherapistSubmissions();
   }
 
+  function setDashboardStat(id, value) {
+    const element = document.getElementById(id);
+    if (element) element.textContent = String(value ?? 0);
+  }
+
+  function renderDashboardSummaryCards() {
+    const summary = state.serverDashboardSummary;
+    setDashboardStat('dashboard-stat-events', summary?.newEvents ?? 0);
+    setDashboardStat('dashboard-stat-unread', summary?.unreadThreads ?? 0);
+    setDashboardStat('dashboard-stat-patients', summary?.activePatients ?? 0);
+    setDashboardStat('dashboard-stat-assigned', summary?.assignedCount ?? 0);
+
+    const focusTitle = document.getElementById('therapist-focus-title');
+    const focusCopy = document.getElementById('therapist-focus-copy');
+    const focusTimeline = document.getElementById('therapist-focus-timeline');
+    const activityList = document.getElementById('dashboard-recent-activity-list');
+
+    if (state.currentUser?.role !== 'therapist') {
+      if (focusTitle) focusTitle.textContent = 'Logga in som terapeut för att se nästa steg';
+      if (focusCopy) focusCopy.textContent = 'Dashboarden använder nu verkliga auth-backade relationer, inskick och meddelanden för att lyfta fram det som behöver uppmärksamhet först.';
+      if (focusTimeline) {
+        focusTimeline.innerHTML = `
+          <div><strong>Steg 1</strong><span>Länka en registrerad patient</span></div>
+          <div><strong>Steg 2</strong><span>Tilldela ett material eller en hemuppgift</span></div>
+          <div><strong>Steg 3</strong><span>Följ upp svar och meddelanden här</span></div>
+        `;
+      }
+      if (activityList) {
+        activityList.innerHTML = '<div class="list-item"><span class="list-primary">Ingen auth-backad aktivitet ännu</span><span class="list-secondary">Länka patient, tilldela material och börja arbeta så fylls listan här.</span></div>';
+      }
+      return;
+    }
+
+    if (focusTitle) {
+      focusTitle.textContent = summary?.pendingSubmissions
+        ? `${summary.pendingSubmissions} inskick väntar på återkoppling`
+        : summary?.unreadThreads
+          ? `${summary.unreadThreads} patienttrådar väntar på svar`
+          : summary?.linkedPatients
+            ? `${summary.linkedPatients} länkade patienter i lugnt läge`
+            : 'Börja med att länka din första patient';
+    }
+    if (focusCopy) {
+      focusCopy.textContent = summary?.pendingSubmissions
+        ? 'Öppna inskicksvyn och ge kort återkoppling där det väntar, så fortsätter behandlingsflödet utan att tappa fart.'
+        : summary?.unreadThreads
+          ? 'Det finns patienttrådar där senaste meddelandet kommer från patienten. Ett kort svar räcker ofta långt här.'
+          : summary?.linkedPatients
+            ? 'Relationerna finns på plats. Nästa naturliga steg är att tilldela nytt material eller följa upp senaste aktivitet.'
+            : 'När du länkat en registrerad patient börjar dashboarden visa verkliga relationer, händelser och senaste aktivitet.';
+    }
+    if (focusTimeline) {
+      const items = summary?.recentActivity?.length
+        ? summary.recentActivity.slice(0, 3)
+        : [
+            { title: 'Länka patient', detail: 'Bjud in eller koppla ett registrerat patientkonto' },
+            { title: 'Tilldela material', detail: 'Skicka första hemuppgiften eller psykoedukationen' },
+            { title: 'Följ upp', detail: 'Svara på meddelanden och granska inskick härifrån' }
+          ];
+      focusTimeline.innerHTML = items.map((item, index) => `
+        <div><strong>${escapeHtml(item.timestamp || `Steg ${index + 1}`)}</strong><span>${escapeHtml(item.title)}${item.detail ? ` · ${escapeHtml(compactText(item.detail, 70))}` : ''}</span></div>
+      `).join('');
+    }
+    if (activityList) {
+      const items = summary?.recentActivity || [];
+      activityList.innerHTML = items.length
+        ? items.map(item => `<div class="list-item"><span class="list-primary">${escapeHtml(item.title || 'Aktivitet')}</span><span class="list-secondary">${escapeHtml(item.detail || 'Detaljer saknas')}${item.timestamp ? ` · ${escapeHtml(item.timestamp)}` : ''}</span></div>`).join('')
+        : '<div class="list-item"><span class="list-primary">Ingen auth-backad aktivitet ännu</span><span class="list-secondary">Länka patient, tilldela material och börja arbeta så fylls listan här.</span></div>';
+    }
+  }
+
   function renderDashboardOverview() {
+    renderDashboardSummaryCards();
     const list = document.getElementById('therapist-patient-overview-list');
     const summary = document.getElementById('therapist-patient-overview-summary');
     if (!list || !summary) return;
@@ -1994,6 +2092,7 @@ function initMaterialBuilder() {
     if (existingIndex >= 0) submissions.splice(existingIndex, 1);
     submissions.unshift(submissionEntry);
     await saveSubmissionItems(submissions);
+    await loadDashboardSummary();
     renderSavedCollections();
     renderDashboardOverview();
     showToast('Inskickat', `${item.title} skickades in av ${item.patientName}.`);
@@ -2210,6 +2309,7 @@ function initMaterialBuilder() {
       await saveAssignedItems(assigned);
     }
 
+    await loadDashboardSummary();
     renderSavedCollections();
     renderDashboardOverview();
     openSubmission(submissionId);
@@ -2242,6 +2342,7 @@ function initMaterialBuilder() {
       await saveAssignedItems(assigned);
     }
 
+    await loadDashboardSummary();
     renderSavedCollections();
     renderDashboardOverview();
     openSubmission(submissionId);

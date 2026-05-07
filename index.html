@@ -102,7 +102,7 @@
       </div>
       <div class="login-footnote">
         <p class="login-note">Konton och lösenord sparas nu lokalt i en enkel backend. Övrig appdata är fortfarande en första version.</p>
-        <p class="login-updated">Uppdaterades: 2026-05-07 13:52 CEST</p>
+        <p class="login-updated">Uppdaterades: 2026-05-07 16:43 CEST</p>
       </div>
     </div>
   </section>
@@ -151,22 +151,22 @@
             </div>
           </div>
           <div class="hero-side card soft-panel">
-            <span class="section-kicker">I fokus idag</span>
-            <h3>Maja Svensson behöver återkoppling</h3>
-            <p>Veckans exponering är inskickad, ett meddelande väntar och nästa session är bokad idag 14.00.</p>
-            <div class="mini-timeline">
-              <div><strong>13.15</strong><span>Se inlämnad hemuppgift</span></div>
-              <div><strong>13.30</strong><span>Skicka kort återkoppling</span></div>
-              <div><strong>14.00</strong><span>Behandlingssamtal</span></div>
+            <span class="section-kicker">I fokus nu</span>
+            <h3 id="therapist-focus-title">Logga in som terapeut för att se nästa steg</h3>
+            <p id="therapist-focus-copy">Dashboarden använder nu verkliga auth-backade relationer, inskick och meddelanden för att lyfta fram det som behöver uppmärksamhet först.</p>
+            <div class="mini-timeline" id="therapist-focus-timeline">
+              <div><strong>Steg 1</strong><span>Länka en registrerad patient</span></div>
+              <div><strong>Steg 2</strong><span>Tilldela ett material eller en hemuppgift</span></div>
+              <div><strong>Steg 3</strong><span>Följ upp svar och meddelanden här</span></div>
             </div>
             <img class="hero-inline-image" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1200&auto=format&fit=crop" alt="Positiv terapeutisk närvaro" loading="lazy" />
           </div>
         </div>
         <div class="dashboard-grid">
-          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="card-stat">3</div><div class="card-label">Nya händelser</div></div>
-          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="card-stat">7</div><div class="card-label">Olästa meddelanden</div></div>
-          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="card-stat">12</div><div class="card-label">Aktiva patienter</div></div>
-          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="card-stat">2</div><div class="card-label">Bokade tider idag</div></div>
+          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="card-stat" id="dashboard-stat-events">0</div><div class="card-label">Nya händelser</div></div>
+          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="card-stat" id="dashboard-stat-unread">0</div><div class="card-label">Trådar som väntar svar</div></div>
+          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="card-stat" id="dashboard-stat-patients">0</div><div class="card-label">Aktiva patienter</div></div>
+          <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="card-stat" id="dashboard-stat-assigned">0</div><div class="card-label">Tilldelade material</div></div>
         </div>
         <div class="care-flow-grid mt-lg">
           <div class="card care-flow-card">
@@ -204,9 +204,9 @@
           </div>
           <div class="card card-list">
             <h3>Senaste aktivitet</h3>
-            <div class="list-item"><span class="list-primary">Inlämnad hemuppgift</span><span class="list-secondary">Maja S. – exponering vecka 2 · 25 min sedan</span></div>
-            <div class="list-item"><span class="list-primary">Nytt meddelande</span><span class="list-secondary">Erik J. – frågar om sömnregistrering · 1 tim sedan</span></div>
-            <div class="list-item"><span class="list-primary">Mål uppdaterat</span><span class="list-secondary">Linda B. – nytt fokus på återfallsprevention · 2 tim sedan</span></div>
+            <div id="dashboard-recent-activity-list">
+              <div class="list-item"><span class="list-primary">Ingen auth-backad aktivitet ännu</span><span class="list-secondary">Länka patient, tilldela material och börja arbeta så fylls listan här.</span></div>
+            </div>
           </div>
         </div>
         <div class="integration-note card mt-lg">
