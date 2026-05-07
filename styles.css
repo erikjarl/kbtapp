@@ -157,6 +157,20 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .flow-step small,.spotlight-row small{display:block;color:#6b645e;margin-top:2px}
 .spotlight-row{justify-content:space-between;align-items:center}
 .spotlight-row strong{font-size:.92rem}
+.patient-overview-lead{margin:0 0 10px;color:#5f5852;font-size:.9rem}
+.patient-overview-summary{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.patient-overview-summary span,.patient-overview-meta span{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#f6f2eb;color:#6b645e;font-size:.78rem;font-weight:600}
+.patient-overview-list{gap:10px}
+.patient-overview-item{display:grid;gap:10px;padding:14px;border-radius:22px;background:linear-gradient(180deg,#fffdf9,#fbf7f1);border:1px solid #ebe4da}
+.patient-overview-main{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.patient-overview-main strong{display:block}
+.patient-overview-main small{display:block;color:#6b645e;margin-top:3px}
+.patient-overview-meta{display:flex;flex-wrap:wrap;gap:8px}
+.patient-overview-activity{display:grid;gap:3px}
+.patient-overview-activity strong{font-size:.86rem}
+.patient-overview-activity small{color:#6b645e}
+.patient-overview-actions{display:flex;flex-wrap:wrap;gap:8px}
+.spotlight-row-empty{display:grid;justify-content:stretch}
 .library-page-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-end}
 .library-summary{min-width:260px;padding:18px 20px;border-radius:28px;background:linear-gradient(180deg,#fff9f4,#fdfdfb)}
 .library-summary strong,.library-summary small{display:block}

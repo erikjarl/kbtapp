@@ -690,3 +690,51 @@
 ### Nästa steg
 - Nästa rimliga tydliga del är att låta patientens `Mitt material` bygga på verkligt serverpersistat och tilldelat material i stället för seedad klientdata
 - Alternativt bygga vidare på relationen med en liten `mina patienter`-översikt i terapeutvyn, så länkade konton blir synliga även utanför tilldelningsmodalen
+
+## 2026-05-07 — Enkel auth-backad “Mina patienter”-översikt i terapeutdashboard
+
+### Vad jag arbetade med
+- En avgränsad del: terapeutens dashboard
+- Målet var att göra de nya riktiga terapeut–patientrelationerna mer användbara i praktiken genom att visa länkade patienter och deras senaste aktivitet direkt i huvudvyn
+
+### Vad jag ändrade
+- Bytte ut den statiska demosektionen `Tre patienter att prioritera` mot en verklig sektion `Mina patienter`
+- Byggde en ny frontendrendering i `script.js` som sammanfattar auth-backade relationer utifrån:
+  - länkade patientkonton
+  - tilldelade material
+  - inskick
+  - meddelandetrådar
+- Lade till enkel prioritering så patienter med inskick som väntar på återkoppling visas först
+- Lade till sammanfattningsrad med antal länkade patienter och antal som väntar på återkoppling
+- Lade till snabbåtgärder per patient:
+  - `Öppna tråd`
+  - `Tilldela material`
+- Uppdaterade översikten så den renderas om när terapeuten:
+  - loggar in/ut
+  - länkar eller tilldelar patient
+  - skickar meddelande
+  - får nytt inskick eller markerar/granskar det
+- Lade till riktat Playwright-test `playwright-dashboard-overview-check.js`
+- Sparade QA-skärmdumpar i `qa-artifacts/dashboard-overview-desktop.png` och `qa-artifacts/dashboard-overview-mobile.png`
+- Uppdaterade login-sidans synliga tidsstämpel enligt projektregeln
+
+### Vad som nu fungerar
+- Inloggad terapeut ser nu verkliga länkade patienter i dashboarden i stället för en statisk demosnurra
+- Dashboarden visar nu en första auth-backad översikt över vilka patienter som faktiskt är kopplade till terapeuten
+- Patienter med väntande inskick prioriteras högre i listan
+- Terapeuten kan öppna rätt meddelandetråd direkt från dashboarden
+- Terapeuten kan öppna tilldelningsmodalen för en specifik redan länkad patient direkt från dashboarden
+- Praktiskt test verifierade:
+  - desktop 1440×900: registrera terapeut → registrera patient → länka patient via e-post → tilldela material → öppna dashboard och se `1 länkade patienter`, rätt patientnamn och knapp för `Öppna tråd`
+  - mobil 390×844: logga in som samma patient → öppna `Mitt material` och se att det tilldelade materialet fortfarande syns i det auth-backade flödet
+- `node --check server.js && node --check script.js && node --check playwright-dashboard-overview-check.js` passerar
+- Riktad Playwright-körning passerade mot lokal Node-server på port `4322`
+
+### Vad som inte fungerar
+- Dashboardöversikten är fortfarande en frontend-sammanställning ovanpå befintlig enkel backend; det finns ännu ingen separat serverendpoint för aggregerad dashboarddata
+- Översikten visar ännu inte bokningar, olästmarkeringar eller en mer explicit prioriteringsmodell utöver väntande inskick och senaste aktivitet
+- Browser-verktyget användes inte heller i denna körning; praktisk verifiering gjordes med lokal Playwright mot Node-server
+
+### Nästa steg
+- Nästa rimliga tydliga del är att göra dashboarden ännu mer verklig genom att låta `Nya händelser`, `Olästa meddelanden` och `Aktiva patienter` bygga på samma auth-backade data i stället för hårdkodade siffror
+- Alternativt kan nästa körning ta nästa backendnära steg och lägga till en liten serveraggregerad dashboard-endpoint för terapeutens översikt utan att bygga om arkitekturen

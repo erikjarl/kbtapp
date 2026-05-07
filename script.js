@@ -394,6 +394,7 @@ function initMaterialBuilder() {
   bindSubmissionFilters();
   loadServerCollections().finally(() => {
     renderSavedCollections();
+    renderDashboardOverview();
     render();
   });
 
@@ -720,6 +721,7 @@ function initMaterialBuilder() {
       populatePatientSelect();
     }
     renderSavedCollections();
+    renderDashboardOverview();
     renderMessages();
   });
 
@@ -901,6 +903,8 @@ function initMaterialBuilder() {
     thread.messages.push(createMessage(author, text));
     try {
       await saveMessageThreads(threads);
+      renderSavedCollections();
+      renderDashboardOverview();
       renderMessages();
       showToast(author === 'therapist' ? 'Svar skickat' : 'Meddelande skickat', patientLabel(patientId));
     } catch (error) {
@@ -1578,6 +1582,7 @@ function initMaterialBuilder() {
     }
 
     renderSavedCollections();
+    renderDashboardOverview();
     renderMessages();
     showToast('Material tilldelat', `${title} skickades till ${patient.name}.`);
     closeModal(els.assignModal);
@@ -1621,6 +1626,97 @@ function initMaterialBuilder() {
     renderClientAssignments();
     renderClientMaterials();
     renderTherapistSubmissions();
+  }
+
+  function renderDashboardOverview() {
+    const list = document.getElementById('therapist-patient-overview-list');
+    const summary = document.getElementById('therapist-patient-overview-summary');
+    if (!list || !summary) return;
+    if (state.currentUser?.role !== 'therapist') {
+      summary.innerHTML = '<span>Logga in som terapeut</span><span>Översikten aktiveras efter inloggning</span>';
+      list.innerHTML = '<div class="spotlight-row spotlight-row-empty"><strong>Ingen terapeut inloggad</strong><small>Skapa eller logga in på ett terapeutkonto för att se riktiga relationer här.</small></div>';
+      return;
+    }
+
+    const knownPatients = getKnownPatients().filter(patient => patient.userId);
+    const assignedItems = getAssignedItems();
+    const submissions = getSubmissionItems();
+    const threads = getMessageThreads();
+
+    const rows = knownPatients.map(patient => {
+      const patientAssigned = assignedItems.filter(item => item.patientId === patient.id);
+      const patientSubmissions = submissions.filter(item => item.patientId === patient.id);
+      const patientThread = threads.find(item => item.patientId === patient.id);
+      const pendingCount = patientSubmissions.filter(item => (item.status || 'inskickad') === 'inskickad').length;
+      const lastAssigned = [...patientAssigned].sort((a, b) => getSubmissionTimestamp(b.createdAt) - getSubmissionTimestamp(a.createdAt))[0];
+      const lastSubmission = [...patientSubmissions].sort((a, b) => getSubmissionTimestamp(b.reviewedAt || b.submittedAt) - getSubmissionTimestamp(a.reviewedAt || a.submittedAt))[0];
+      const lastMessage = [...(patientThread?.messages || [])].sort((a, b) => getSubmissionTimestamp(b.timestamp) - getSubmissionTimestamp(a.timestamp))[0];
+      const latestActivity = [
+        lastAssigned ? { label: `Tilldelat ${lastAssigned.title}`, time: lastAssigned.createdAt } : null,
+        lastSubmission ? { label: `${(lastSubmission.status || 'inskickad') === 'granskad' ? 'Granskad' : 'Inskickad'}: ${lastSubmission.title}`, time: lastSubmission.reviewedAt || lastSubmission.submittedAt } : null,
+        lastMessage ? { label: `${lastMessage.author === 'client' ? 'Senaste patientmeddelande' : 'Senaste terapeutmeddelande'}`, time: lastMessage.timestamp, preview: compactText(lastMessage.text, 72) } : null
+      ].filter(Boolean).sort((a, b) => getSubmissionTimestamp(b.time) - getSubmissionTimestamp(a.time))[0];
+
+      return {
+        patient,
+        assignedCount: patientAssigned.length,
+        pendingCount,
+        messageCount: patientThread?.messages?.length || 0,
+        latestActivity,
+        statusLabel: pendingCount ? 'Väntar på återkoppling' : patientAssigned.length ? 'Aktiv behandlingskontakt' : 'Länkad utan aktivitet'
+      };
+    }).sort((a, b) => {
+      if (b.pendingCount !== a.pendingCount) return b.pendingCount - a.pendingCount;
+      return getSubmissionTimestamp(b.latestActivity?.time || '') - getSubmissionTimestamp(a.latestActivity?.time || '');
+    });
+
+    const pendingTotal = rows.reduce((sum, row) => sum + row.pendingCount, 0);
+    summary.innerHTML = `<span>${rows.length} länkade patienter</span><span>${pendingTotal} väntar på återkoppling</span>`;
+
+    if (!rows.length) {
+      list.innerHTML = '<div class="spotlight-row spotlight-row-empty"><strong>Inga länkade patienter ännu</strong><small>Länka en registrerad patient via e-post i tilldelningsflödet för att få en verklig patientöversikt här.</small></div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    rows.forEach(row => {
+      const item = document.createElement('div');
+      item.className = 'patient-overview-item';
+      item.innerHTML = `
+        <div class="patient-overview-main">
+          <div>
+            <strong>${escapeHtml(row.patient.name)}</strong>
+            <small>${escapeHtml(row.statusLabel)}</small>
+          </div>
+          <span class="status-pill status-${escapeAttribute(row.pendingCount ? 'inskickad' : 'granskad')}">${row.pendingCount ? `${row.pendingCount} väntar` : 'I fas'}</span>
+        </div>
+        <div class="patient-overview-meta">
+          <span>${row.assignedCount} tilldelade</span>
+          <span>${row.messageCount} meddelanden</span>
+        </div>
+        <div class="patient-overview-activity">
+          <strong>${escapeHtml(row.latestActivity?.label || 'Ingen aktivitet ännu')}</strong>
+          <small>${escapeHtml(row.latestActivity?.preview || row.latestActivity?.time || 'Länka och tilldela första materialet för att komma igång.')}</small>
+        </div>
+        <div class="patient-overview-actions">
+          <button class="builder-action" type="button">Öppna tråd</button>
+          <button class="builder-action" type="button">Tilldela material</button>
+        </div>
+      `;
+      const [openThreadButton, assignButton] = item.querySelectorAll('button');
+      openThreadButton?.addEventListener('click', () => {
+        state.activeTherapistThreadPatientId = row.patient.id;
+        state.activeClientPatientId = row.patient.id;
+        renderMessages();
+        document.querySelector('#therapist-view .nav-item[data-page="messages"]')?.click();
+      });
+      assignButton?.addEventListener('click', () => {
+        state.assignedPatientId = row.patient.id;
+        populatePatientSelect();
+        openModal(els.assignModal);
+      });
+      list.appendChild(item);
+    });
   }
 
   function renderClientAssignments() {
@@ -1899,6 +1995,7 @@ function initMaterialBuilder() {
     submissions.unshift(submissionEntry);
     await saveSubmissionItems(submissions);
     renderSavedCollections();
+    renderDashboardOverview();
     showToast('Inskickat', `${item.title} skickades in av ${item.patientName}.`);
   }
 
@@ -2114,6 +2211,7 @@ function initMaterialBuilder() {
     }
 
     renderSavedCollections();
+    renderDashboardOverview();
     openSubmission(submissionId);
     showToast('Markerad som granskad', `${item.title} är nu markerad som granskad.`);
   }
@@ -2145,6 +2243,7 @@ function initMaterialBuilder() {
     }
 
     renderSavedCollections();
+    renderDashboardOverview();
     openSubmission(submissionId);
     showToast('Återkoppling sparad', 'Patienten kan nu se din kommentar i sin uppgift.');
   }

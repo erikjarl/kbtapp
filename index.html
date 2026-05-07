@@ -102,7 +102,7 @@
       </div>
       <div class="login-footnote">
         <p class="login-note">Konton och lösenord sparas nu lokalt i en enkel backend. Övrig appdata är fortfarande en första version.</p>
-        <p class="login-updated">Uppdaterades: 2026-05-07 10:48 CEST</p>
+        <p class="login-updated">Uppdaterades: 2026-05-07 13:52 CEST</p>
       </div>
     </div>
   </section>
@@ -182,13 +182,16 @@
               <div class="flow-step"><span>3</span><div><strong>Tilldela patient</strong><small>Skicka hemuppgift och följ svar i samma gränssnitt.</small></div></div>
             </div>
           </div>
-          <div class="card patient-spotlight-card">
-            <span class="section-kicker">Patientöversikt</span>
-            <h3>Tre patienter att prioritera</h3>
-            <div class="patient-spotlight-list">
-              <div class="spotlight-row"><strong>Maja Svensson</strong><small>Inskick väntar · hög prioritet</small></div>
-              <div class="spotlight-row"><strong>Erik Johansson</strong><small>Oläst fråga om sömnregistrering</small></div>
-              <div class="spotlight-row"><strong>Linda Berg</strong><small>Nytt mål tillagt inför torsdag</small></div>
+          <div class="card patient-spotlight-card" id="therapist-patient-overview-card">
+            <span class="section-kicker">Mina patienter</span>
+            <h3>Verkliga länkade patienter och senaste aktivitet</h3>
+            <p class="patient-overview-lead">Den här översikten bygger på auth-backade relationer, tilldelningar, inskick och meddelanden.</p>
+            <div class="patient-overview-summary" id="therapist-patient-overview-summary">
+              <span>0 länkade patienter</span>
+              <span>0 väntar på återkoppling</span>
+            </div>
+            <div class="patient-spotlight-list patient-overview-list" id="therapist-patient-overview-list">
+              <div class="spotlight-row spotlight-row-empty"><strong>Inga länkade patienter ännu</strong><small>Länka en registrerad patient i tilldelningsflödet för att börja här.</small></div>
             </div>
           </div>
         </div>
