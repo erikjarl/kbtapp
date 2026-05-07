@@ -830,6 +830,46 @@
 - Nästa rimliga tydliga del är att renodla den auth-backade trådrelationen ytterligare så klient→terapeut och terapeut→klient alltid använder exakt samma relationstråd utan äldre fallbackbeteenden
 - Alternativt bygga en mycket liten refresh-/resync-rutin för dashboard och meddelandeytor efter extern aktivitet, utan att införa tung realtidsarkitektur
 
+## 2026-05-08 — Liten auth-backad refresh/resync vid vybyte och återfokus
+
+### Vad jag arbetade med
+- En avgränsad del: auth-backade vyer som riskerar att visa stale data efter extern aktivitet från en annan användare/session
+- Målet var att stärka det verkliga användarflödet runt registrerade konton utan tung realtidsarkitektur, särskilt för terapeutens meddelanden/dashboard och patientens uppgifter/material/kontakt
+
+### Vad jag ändrade
+- Lade till en liten page-change-signal i frontendnavigeringen så appen vet vilken auth-backad vy användaren faktiskt öppnar
+- Lade till en enkel `refreshAuthBackedData(...)`-rutin i `script.js` som hämtar om serverdata och återrenderar relevanta vyer
+- Lade till skydd mot onödig spam mot backend:
+  - cooldown mellan hämtningar
+  - lås mot parallella refresh-anrop
+- Kopplade refresh-rutinen till tre små triggers:
+  - när användaren växlar till vissa auth-backade sidor
+  - när dokumentet blir synligt igen
+  - när fönstret får fokus igen
+- Begränsade auto-refresh till sidor där nyttan är störst just nu:
+  - terapeut: `dashboard`, `messages`, `library`
+  - patient: `assignments`, `materials`, `contact`
+- Uppdaterade login-sidans synliga tidsstämpel enligt projektregeln
+- Lade till riktat testskript `playwright-auth-resync-check.js` som förbereder en praktisk fleranvändarcheck av resync-flödet
+
+### Vad som nu fungerar
+- Appen har nu en liten men mer långsiktigt rimlig resync-mekanism ovanpå den enkla backend som redan bär auth och behandlingsdata
+- En auth-backad vy behöver i mindre grad lita på full manuell omladdning för att få in extern aktivitet
+- Lösningen håller sig enkel och undviker både polling-loopar och större arkitekturomtag
+- `node --check script.js && node --check server.js` passerar
+- Lokal serverstart verifierades på port `4360`
+
+### Vad som inte fungerar
+- Praktisk browserverifiering kunde inte slutföras denna körning trots flera försök:
+  - OpenClaws browser-verktyg kunde inte ansluta till Chrome eftersom debug-port saknades
+  - riktad Playwright-körning mot systemets Chrome fastnade redan i första UI-steget i denna miljö trots att lokal HTTP-server svarade korrekt
+- Därför är denna iteration verifierad via kodändring, syntaxkontroll och startbar lokal server, men inte via fullt passerande desktop+mobil-E2E i just denna körning
+- Auto-refresh är fortfarande medvetet lättviktig; det finns ännu ingen realtid via websockets/SSE och ingen mer finmaskig dirty-state/syncmodell
+
+### Nästa steg
+- När browsermiljön går att använda igen: kör den riktade resync-kollen praktiskt och verifiera att terapeutens öppna vy plockar upp nytt patientmeddelande efter återfokus eller sidväxling utan full reload
+- Därefter är ett bra nästa lilla steg att göra samma sak mer riktat för dashboardkort och patientens `Mitt material` med ännu tydligare visuell uppdateringstid eller diskret `uppdaterat nyss`-indikator
+
 ## 2026-05-07 — Striktare relationstråd i auth-backade meddelanden
 
 ### Vad jag arbetade med

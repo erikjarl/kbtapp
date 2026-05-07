@@ -219,6 +219,12 @@ document.addEventListener('DOMContentLoaded', () => {
         page.classList.toggle('active', page.dataset.page === pageId);
       });
       main.scrollTo({ top: 0, behavior: 'smooth' });
+      document.dispatchEvent(new CustomEvent('kbtapp:page-changed', {
+        detail: {
+          view: viewElement.dataset.appView || '',
+          pageId
+        }
+      }));
     }
 
     sideNav.querySelectorAll('.nav-item[data-page]').forEach(item => {
@@ -307,7 +313,13 @@ function initMaterialBuilder() {
     serverDashboardSummary: null,
     serverDataLoaded: false,
     currentUser: null,
-    linkedClients: []
+    linkedClients: [],
+    serverSyncInFlight: false,
+    lastServerSyncAt: 0,
+    activePageByView: {
+      therapist: 'dashboard',
+      client: 'dashboard'
+    }
   };
 
   const collapsedTypes = new Set(['rating', 'textfield', 'table', 'emoji', 'info']);
@@ -763,10 +775,75 @@ function initMaterialBuilder() {
     }
   }
 
+  function shouldSyncForPage(view, pageId) {
+    if (!getAuthToken()) return false;
+    if (view === 'therapist') {
+      return ['dashboard', 'messages', 'library'].includes(pageId);
+    }
+    if (view === 'client') {
+      return ['assignments', 'materials', 'contact'].includes(pageId);
+    }
+    return false;
+  }
+
+  async function refreshAuthBackedData(reason = 'manual', options = {}) {
+    if (!getAuthToken() || !state.currentUser) return false;
+    const now = Date.now();
+    const cooldownMs = options.cooldownMs ?? 4000;
+    if (!options.force && state.serverSyncInFlight) return false;
+    if (!options.force && state.lastServerSyncAt && (now - state.lastServerSyncAt) < cooldownMs) {
+      return false;
+    }
+
+    state.serverSyncInFlight = true;
+    try {
+      await loadServerCollections();
+      renderSavedCollections();
+      renderDashboardOverview();
+      renderMessages();
+      state.lastServerSyncAt = Date.now();
+      return true;
+    } catch (error) {
+      console.warn(`Kunde inte synka auth-backad data (${reason}):`, error);
+      return false;
+    } finally {
+      state.serverSyncInFlight = false;
+    }
+  }
+
+  document.addEventListener('kbtapp:page-changed', event => {
+    const view = event.detail?.view || '';
+    const pageId = event.detail?.pageId || '';
+    if (!view || !pageId) return;
+    state.activePageByView[view] = pageId;
+    if (shouldSyncForPage(view, pageId)) {
+      refreshAuthBackedData(`page:${view}:${pageId}`);
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const view = state.currentUser?.role === 'therapist' ? 'therapist' : state.currentUser?.role === 'client' ? 'client' : '';
+    const pageId = view ? state.activePageByView[view] : '';
+    if (shouldSyncForPage(view, pageId)) {
+      refreshAuthBackedData('visibility', { cooldownMs: 3000 });
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    const view = state.currentUser?.role === 'therapist' ? 'therapist' : state.currentUser?.role === 'client' ? 'client' : '';
+    const pageId = view ? state.activePageByView[view] : '';
+    if (shouldSyncForPage(view, pageId)) {
+      refreshAuthBackedData('window-focus', { cooldownMs: 3000 });
+    }
+  });
+
   document.addEventListener('kbtapp:auth-changed', async event => {
     state.currentUser = event.detail?.user || null;
+    state.lastServerSyncAt = 0;
     if (event.detail?.loggedIn) {
       await loadServerCollections();
+      state.lastServerSyncAt = Date.now();
     } else {
       state.serverAssigned = JSON.parse(localStorage.getItem(STORAGE_KEYS.assigned) || '[]');
       state.serverSubmissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || '[]');
