@@ -165,6 +165,24 @@ function getTimestamp(value) {
   return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)).getTime();
 }
 
+function getLatestMessageTimestamp(thread, author) {
+  const messages = Array.isArray(thread?.messages) ? thread.messages : [];
+  const filtered = author ? messages.filter(message => message?.author === author) : messages;
+  return Math.max(0, ...filtered.map(message => getTimestamp(message?.timestamp)));
+}
+
+function getUnreadCountForViewer(thread, viewer) {
+  const messages = Array.isArray(thread?.messages) ? thread.messages : [];
+  const incomingAuthor = viewer === 'therapist' ? 'client' : 'therapist';
+  const readAt = viewer === 'therapist' ? thread?.lastReadByTherapistAt : thread?.lastReadByClientAt;
+  const readTimestamp = getTimestamp(readAt);
+  return messages.filter(message => message?.author === incomingAuthor && getTimestamp(message?.timestamp) > readTimestamp).length;
+}
+
+function threadNeedsTherapistReply(thread) {
+  return getLatestMessageTimestamp(thread, 'client') > getLatestMessageTimestamp(thread, 'therapist');
+}
+
 function itemMatchesUserScope(item, user, collectionName) {
   if (!item || !user) return false;
 
@@ -424,12 +442,8 @@ async function handleApi(req, res, pathname) {
 
     const pendingSubmissions = submissions.filter(item => (item?.status || 'inskickad') === 'inskickad');
     const recentAssignments = assignedItems.filter(item => getTimestamp(item?.createdAt) > 0);
-    const unreadMessageThreads = threads.filter(thread => {
-      const messages = Array.isArray(thread?.messages) ? thread.messages : [];
-      const latestClientTs = Math.max(0, ...messages.filter(msg => msg?.author === 'client').map(msg => getTimestamp(msg.timestamp)));
-      const latestTherapistTs = Math.max(0, ...messages.filter(msg => msg?.author === 'therapist').map(msg => getTimestamp(msg.timestamp)));
-      return latestClientTs > latestTherapistTs;
-    });
+    const unreadMessageThreads = threads.filter(thread => getUnreadCountForViewer(thread, 'therapist') > 0);
+    const waitingReplyThreads = threads.filter(thread => threadNeedsTherapistReply(thread));
 
     const recentActivity = [];
     assignedItems.forEach(item => recentActivity.push({
@@ -464,6 +478,7 @@ async function handleApi(req, res, pathname) {
         activePatients: activePatientIds.size,
         pendingSubmissions: pendingSubmissions.length,
         unreadThreads: unreadMessageThreads.length,
+        waitingReplyThreads: waitingReplyThreads.length,
         newEvents: pendingSubmissions.length + unreadMessageThreads.length + recentAssignments.length,
         assignedCount: assignedItems.length,
         recentActivity: recentActivity.slice(0, 3)

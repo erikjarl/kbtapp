@@ -784,3 +784,48 @@
 ### Nästa steg
 - Nästa rimliga tydliga del är att göra dashboarden ännu mer verklig genom att låta `Nya händelser`, `Olästa meddelanden` och `Aktiva patienter` bygga på samma auth-backade data i stället för hårdkodade siffror
 - Alternativt kan nästa körning ta nästa backendnära steg och lägga till en liten serveraggregerad dashboard-endpoint för terapeutens översikt utan att bygga om arkitekturen
+
+## 2026-05-07 — Enkel läst/svarad-status i auth-backade meddelandetrådar
+
+### Vad jag arbetade med
+- En avgränsad del: auth-backade meddelandetrådar mellan terapeut och patient
+- Målet var att göra trådstatusen mindre demoartad genom att lägga till enkel serverpersistad lässtatus och bättre skillnad mellan `oläst aktivitet` och `väntar på svar`
+
+### Vad jag ändrade
+- Utökade trådmodellen i `script.js` med `lastReadByTherapistAt` och `lastReadByClientAt`
+- Lade till frontendlogik för att:
+  - räkna olästa inkommande meddelanden per vy
+  - skilja på `oläst` och `väntar på svar`
+  - markera terapeutens tråd som läst när den öppnas
+  - markera patientens tråd som läst när kontaktvyn öppnas
+  - sätta egen lässtatus direkt när användaren själv skickar nytt meddelande
+- Utökade `server.js` så dashboardsammanfattningen nu räknar både:
+  - `unreadThreads`
+  - `waitingReplyThreads`
+- Gjorde terapeutens dashboard och patientöversikt mer verkliga genom att väga in:
+  - trådar som verkligen väntar terapeutsvar
+  - oläst aktivitet i trådar
+- Förbättrade text/badges i terapeutens trådlista så den tydligare visar när något faktiskt är oläst
+- Lade till riktat Playwright-test `playwright-message-read-status-check.js`
+- Sparade nya QA-skärmdumpar i `qa-artifacts/message-read-status-desktop.png` och `qa-artifacts/message-read-status-mobile.png`
+- Uppdaterade login-sidans synliga tidsstämpel enligt projektregeln
+
+### Vad som nu fungerar
+- Meddelandetrådar har nu en enkel persisterad lässtatus i samma auth-backade backendmodell som övrig data
+- Dashboardsammanfattningen kan nu skilja bättre på `oläst aktivitet` och `väntar på svar` i stället för att bara gissa utifrån senaste meddelanderiktning
+- Terapeutens trådlista visar nu mer träffsäker status för olästa patientmeddelanden
+- När terapeut eller patient öppnar sin tråd sparas läsmarkeringen i backendens JSON-fil och ligger kvar mellan omladdningar
+- Praktiskt test verifierade:
+  - desktop 1440×900: registrera terapeut + patient → länka patient → tilldela material → skicka terapeutsvar → verifiera tråd i terapeutvyn
+  - mobil 390×844: öppna patientens kontaktvy → se terapeutsvaret → ladda om → se att samma auth-backade svar ligger kvar
+- `node --check server.js && node --check script.js && node --check playwright-message-read-status-check.js` passerar
+- Riktad Playwright-körning passerade mot lokal Node-server på port `4340`
+
+### Vad som inte fungerar
+- Dashboarden uppdateras fortfarande inte i realtid mellan två separata inloggade sessioner; i praktiken krävs omladdning eller ny serverhämtning för att en annan användares nya meddelande ska slå igenom i sammanfattningskorten
+- Klient→terapeut-delen av trådflödet bär fortfarande spår av äldre enkel trådmodell, så nästa backendsteg bör gärna göra trådkopplingen ännu striktare per relation om realtidskänslan ska bli mer robust
+- Browser-verktyget användes inte heller i denna körning; praktisk verifiering gjordes med lokal Playwright mot Node-server
+
+### Nästa steg
+- Nästa rimliga tydliga del är att renodla den auth-backade trådrelationen ytterligare så klient→terapeut och terapeut→klient alltid använder exakt samma relationstråd utan äldre fallbackbeteenden
+- Alternativt bygga en mycket liten refresh-/resync-rutin för dashboard och meddelandeytor efter extern aktivitet, utan att införa tung realtidsarkitektur

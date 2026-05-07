@@ -896,8 +896,53 @@ function initMaterialBuilder() {
       patientUserId: options.patientUserId ?? patient.userId ?? null,
       therapistUserId: options.therapistUserId ?? therapistIdentity.therapistUserId ?? '',
       therapistName: options.therapistName ?? therapistIdentity.therapistName ?? 'Dr. Lindgren',
-      messages
+      messages,
+      lastReadByTherapistAt: options.lastReadByTherapistAt ?? '',
+      lastReadByClientAt: options.lastReadByClientAt ?? ''
     };
+  }
+
+  function getThreadLatestTimestamp(thread, author = '') {
+    const messages = Array.isArray(thread?.messages) ? thread.messages : [];
+    const filtered = author ? messages.filter(message => message.author === author) : messages;
+    return Math.max(0, ...filtered.map(message => getSubmissionTimestamp(message.timestamp)));
+  }
+
+  function getUnreadCountForViewer(thread, viewer) {
+    const messages = Array.isArray(thread?.messages) ? thread.messages : [];
+    const incomingAuthor = viewer === 'therapist' ? 'client' : 'therapist';
+    const readAt = viewer === 'therapist' ? thread?.lastReadByTherapistAt : thread?.lastReadByClientAt;
+    const readTimestamp = getSubmissionTimestamp(readAt || '');
+    return messages.filter(message => message.author === incomingAuthor && getSubmissionTimestamp(message.timestamp) > readTimestamp).length;
+  }
+
+  function threadNeedsTherapistReply(thread) {
+    return getThreadLatestTimestamp(thread, 'client') > getThreadLatestTimestamp(thread, 'therapist');
+  }
+
+  async function markThreadRead(patientId, viewer) {
+    const threads = getMessageThreads();
+    const thread = threads.find(item => item.patientId === patientId);
+    if (!thread) return;
+    const latestIncomingTimestamp = viewer === 'therapist'
+      ? getThreadLatestTimestamp(thread, 'client')
+      : getThreadLatestTimestamp(thread, 'therapist');
+    if (!latestIncomingTimestamp) return;
+    const key = viewer === 'therapist' ? 'lastReadByTherapistAt' : 'lastReadByClientAt';
+    const currentReadTimestamp = getSubmissionTimestamp(thread[key] || '');
+    if (currentReadTimestamp >= latestIncomingTimestamp) return;
+    const latestIncomingMessage = [...(thread.messages || [])]
+      .filter(message => message.author === (viewer === 'therapist' ? 'client' : 'therapist'))
+      .sort((a, b) => getSubmissionTimestamp(b.timestamp) - getSubmissionTimestamp(a.timestamp))[0];
+    thread[key] = latestIncomingMessage?.timestamp || thread[key] || new Date().toLocaleString('sv-SE');
+    try {
+      await saveMessageThreads(threads);
+      await loadDashboardSummary();
+      renderDashboardOverview();
+      renderMessages();
+    } catch (error) {
+      console.warn('Kunde inte spara lässtatus för meddelandetråd:', error);
+    }
   }
 
   function createMessage(author, text, timestamp = new Date().toLocaleString('sv-SE')) {
@@ -925,6 +970,13 @@ function initMaterialBuilder() {
       threads.unshift(thread);
     }
     thread.messages.push(createMessage(author, text));
+    const latestTimestamp = thread.messages.at(-1)?.timestamp || new Date().toLocaleString('sv-SE');
+    if (author === 'therapist') {
+      thread.lastReadByTherapistAt = latestTimestamp;
+    }
+    if (author === 'client') {
+      thread.lastReadByClientAt = latestTimestamp;
+    }
     try {
       await saveMessageThreads(threads);
       await loadDashboardSummary();
@@ -956,7 +1008,8 @@ function initMaterialBuilder() {
     els.therapistThreadList.innerHTML = '';
     threads.forEach(thread => {
       const lastMessage = thread.messages.at(-1);
-      const unreadCount = thread.messages.filter(message => message.author === 'client').length;
+      const unreadCount = getUnreadCountForViewer(thread, 'therapist');
+      const waitingReply = threadNeedsTherapistReply(thread);
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `message-thread-button ${thread.patientId === state.activeTherapistThreadPatientId ? 'active' : ''}`;
@@ -969,12 +1022,13 @@ function initMaterialBuilder() {
           <span class="message-count-badge">${thread.messages.length}</span>
         </div>
         <div class="message-thread-preview">${escapeHtml(compactText(lastMessage?.text || 'Starta en tråd med patienten.', 88))}</div>
-        <div class="message-thread-meta"><span>${unreadCount ? unreadCount + ' patientmeddelanden' : 'Ingen ny patienttext'}</span></div>
+        <div class="message-thread-meta"><span>${unreadCount ? unreadCount + ' olästa patientmeddelanden' : waitingReply ? 'Väntar på ditt svar' : 'Ingen ny patienttext'}</span></div>
       `;
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         state.activeTherapistThreadPatientId = thread.patientId;
         state.activeClientPatientId = thread.patientId;
         renderMessages();
+        await markThreadRead(thread.patientId, 'therapist');
       });
       els.therapistThreadList.appendChild(button);
     });
@@ -985,7 +1039,12 @@ function initMaterialBuilder() {
     if (!thread) return;
     if (els.therapistThreadTitle) els.therapistThreadTitle.textContent = thread.patientName;
     if (els.therapistThreadSubtitle) els.therapistThreadSubtitle.textContent = `Säker tråd kopplad till ${thread.patientId}. Här kan terapeuten läsa och svara i samma flöde.`;
-    if (els.therapistThreadStatus) els.therapistThreadStatus.textContent = `${thread.messages.length} meddelanden`;
+    if (els.therapistThreadStatus) {
+      const unreadCount = getUnreadCountForViewer(thread, 'therapist');
+      els.therapistThreadStatus.textContent = unreadCount
+        ? `${thread.messages.length} meddelanden · ${unreadCount} olästa`
+        : `${thread.messages.length} meddelanden`;
+    }
     renderMessageList(els.therapistMessageList, thread.messages, { viewer: 'therapist', thread });
   }
 
@@ -996,8 +1055,12 @@ function initMaterialBuilder() {
     state.activeClientPatientId = thread.patientId;
     if (els.clientThreadTitle) els.clientThreadTitle.textContent = `Kontakt med ${thread.therapistName}`;
     if (els.clientThreadSubtitle) els.clientThreadSubtitle.textContent = `${thread.patientName} kan skriva frågor, status och reflektioner här i ett enkelt första flöde med ${thread.therapistName}.`;
-    if (els.clientThreadStatus) els.clientThreadStatus.textContent = `Senast uppdaterad ${thread.messages.at(-1)?.timestamp || 'nyss'}`;
+    const unreadCount = getUnreadCountForViewer(thread, 'client');
+    if (els.clientThreadStatus) els.clientThreadStatus.textContent = unreadCount
+      ? `${unreadCount} nytt från behandlaren`
+      : `Senast uppdaterad ${thread.messages.at(-1)?.timestamp || 'nyss'}`;
     renderMessageList(els.clientMessageList, thread.messages, { viewer: 'client', thread });
+    markThreadRead(thread.patientId, 'client');
   }
 
   function renderMessageList(target, messages, { viewer, thread }) {
@@ -1662,7 +1725,7 @@ function initMaterialBuilder() {
   function renderDashboardSummaryCards() {
     const summary = state.serverDashboardSummary;
     setDashboardStat('dashboard-stat-events', summary?.newEvents ?? 0);
-    setDashboardStat('dashboard-stat-unread', summary?.unreadThreads ?? 0);
+    setDashboardStat('dashboard-stat-unread', summary?.waitingReplyThreads ?? summary?.unreadThreads ?? 0);
     setDashboardStat('dashboard-stat-patients', summary?.activePatients ?? 0);
     setDashboardStat('dashboard-stat-assigned', summary?.assignedCount ?? 0);
 
@@ -1690,8 +1753,10 @@ function initMaterialBuilder() {
     if (focusTitle) {
       focusTitle.textContent = summary?.pendingSubmissions
         ? `${summary.pendingSubmissions} inskick väntar på återkoppling`
-        : summary?.unreadThreads
-          ? `${summary.unreadThreads} patienttrådar väntar på svar`
+        : summary?.waitingReplyThreads
+          ? `${summary.waitingReplyThreads} patienttrådar väntar på svar`
+          : summary?.unreadThreads
+            ? `${summary.unreadThreads} patienttrådar har oläst aktivitet`
           : summary?.linkedPatients
             ? `${summary.linkedPatients} länkade patienter i lugnt läge`
             : 'Börja med att länka din första patient';
@@ -1699,8 +1764,10 @@ function initMaterialBuilder() {
     if (focusCopy) {
       focusCopy.textContent = summary?.pendingSubmissions
         ? 'Öppna inskicksvyn och ge kort återkoppling där det väntar, så fortsätter behandlingsflödet utan att tappa fart.'
-        : summary?.unreadThreads
+        : summary?.waitingReplyThreads
           ? 'Det finns patienttrådar där senaste meddelandet kommer från patienten. Ett kort svar räcker ofta långt här.'
+          : summary?.unreadThreads
+            ? 'Det finns oläst aktivitet i patienttrådar även om vissa redan fått svar. Du kan snabbt öppna och orientera dig här.'
           : summary?.linkedPatients
             ? 'Relationerna finns på plats. Nästa naturliga steg är att tilldela nytt material eller följa upp senaste aktivitet.'
             : 'När du länkat en registrerad patient börjar dashboarden visa verkliga relationer, händelser och senaste aktivitet.';
@@ -1746,6 +1813,8 @@ function initMaterialBuilder() {
       const patientSubmissions = submissions.filter(item => item.patientId === patient.id);
       const patientThread = threads.find(item => item.patientId === patient.id);
       const pendingCount = patientSubmissions.filter(item => (item.status || 'inskickad') === 'inskickad').length;
+      const unreadCount = patientThread ? getUnreadCountForViewer(patientThread, 'therapist') : 0;
+      const waitingReply = patientThread ? threadNeedsTherapistReply(patientThread) : false;
       const lastAssigned = [...patientAssigned].sort((a, b) => getSubmissionTimestamp(b.createdAt) - getSubmissionTimestamp(a.createdAt))[0];
       const lastSubmission = [...patientSubmissions].sort((a, b) => getSubmissionTimestamp(b.reviewedAt || b.submittedAt) - getSubmissionTimestamp(a.reviewedAt || a.submittedAt))[0];
       const lastMessage = [...(patientThread?.messages || [])].sort((a, b) => getSubmissionTimestamp(b.timestamp) - getSubmissionTimestamp(a.timestamp))[0];
@@ -1759,17 +1828,22 @@ function initMaterialBuilder() {
         patient,
         assignedCount: patientAssigned.length,
         pendingCount,
+        unreadCount,
+        waitingReply,
         messageCount: patientThread?.messages?.length || 0,
         latestActivity,
-        statusLabel: pendingCount ? 'Väntar på återkoppling' : patientAssigned.length ? 'Aktiv behandlingskontakt' : 'Länkad utan aktivitet'
+        statusLabel: pendingCount ? 'Väntar på återkoppling' : waitingReply ? 'Väntar på terapeutsvar' : unreadCount ? 'Oläst aktivitet i tråd' : patientAssigned.length ? 'Aktiv behandlingskontakt' : 'Länkad utan aktivitet'
       };
     }).sort((a, b) => {
       if (b.pendingCount !== a.pendingCount) return b.pendingCount - a.pendingCount;
+      if (Number(b.waitingReply) !== Number(a.waitingReply)) return Number(b.waitingReply) - Number(a.waitingReply);
+      if (b.unreadCount !== a.unreadCount) return b.unreadCount - a.unreadCount;
       return getSubmissionTimestamp(b.latestActivity?.time || '') - getSubmissionTimestamp(a.latestActivity?.time || '');
     });
 
     const pendingTotal = rows.reduce((sum, row) => sum + row.pendingCount, 0);
-    summary.innerHTML = `<span>${rows.length} länkade patienter</span><span>${pendingTotal} väntar på återkoppling</span>`;
+    const unreadTotal = rows.reduce((sum, row) => sum + row.unreadCount, 0);
+    summary.innerHTML = `<span>${rows.length} länkade patienter</span><span>${pendingTotal} väntar på återkoppling</span><span>${unreadTotal} olästa trådmeddelanden</span>`;
 
     if (!rows.length) {
       list.innerHTML = '<div class="spotlight-row spotlight-row-empty"><strong>Inga länkade patienter ännu</strong><small>Länka en registrerad patient via e-post i tilldelningsflödet för att få en verklig patientöversikt här.</small></div>';
@@ -1786,11 +1860,12 @@ function initMaterialBuilder() {
             <strong>${escapeHtml(row.patient.name)}</strong>
             <small>${escapeHtml(row.statusLabel)}</small>
           </div>
-          <span class="status-pill status-${escapeAttribute(row.pendingCount ? 'inskickad' : 'granskad')}">${row.pendingCount ? `${row.pendingCount} väntar` : 'I fas'}</span>
+          <span class="status-pill status-${escapeAttribute(row.pendingCount ? 'inskickad' : row.waitingReply || row.unreadCount ? 'påbörjad' : 'granskad')}">${row.pendingCount ? `${row.pendingCount} väntar` : row.waitingReply ? 'Svar behövs' : row.unreadCount ? `${row.unreadCount} olästa` : 'I fas'}</span>
         </div>
         <div class="patient-overview-meta">
           <span>${row.assignedCount} tilldelade</span>
           <span>${row.messageCount} meddelanden</span>
+          <span>${row.unreadCount} olästa</span>
         </div>
         <div class="patient-overview-activity">
           <strong>${escapeHtml(row.latestActivity?.label || 'Ingen aktivitet ännu')}</strong>
