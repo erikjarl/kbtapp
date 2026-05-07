@@ -829,3 +829,35 @@
 ### Nästa steg
 - Nästa rimliga tydliga del är att renodla den auth-backade trådrelationen ytterligare så klient→terapeut och terapeut→klient alltid använder exakt samma relationstråd utan äldre fallbackbeteenden
 - Alternativt bygga en mycket liten refresh-/resync-rutin för dashboard och meddelandeytor efter extern aktivitet, utan att införa tung realtidsarkitektur
+
+## 2026-05-07 — Striktare relationstråd i auth-backade meddelanden
+
+### Vad jag arbetade med
+- En avgränsad del: hur patientens och terapeutens meddelandevy väljer rätt tråd när flera verkliga terapeut–patientrelationer finns
+- Målet var att stoppa fallbackbeteendet där patientvyn kunde luta sig mot `första bästa` tråd för samma patient-id i stället för en tydlig relationstråd
+
+### Vad jag ändrade
+- Lade till tydlig relationsnyckel i frontendlogiken för meddelandetrådar: `patientId + therapistUserId`
+- Gjorde trådlookup striktare i `script.js` så samma terapeut–patientpar återanvänder exakt samma tråd i stället för lös matchning på bara patient-id
+- Lade till deduplicering av äldre/lösare tråddata vid laddning så relationstrådar normaliseras bättre i minnet
+- Gjorde patientvyns kontaktflöde mer deterministiskt genom att välja den mest relevanta relationstråden i stället för första träffen i listan
+- Lät dashboard-/inboxåtgärder föra med sig rätt terapeutkoppling när man hoppar till tråd från andra delar av appen
+- Lade till ett riktat Playwright-test `playwright-message-relation-thread-check.js` för scenariot två terapeuter → samma patient → svar ska hamna i rätt relationstråd
+
+### Vad som nu fungerar
+- Frontendlogiken är nu byggd runt en striktare relationstråd och inte bara runt patient-id
+- Patientens kontaktvy ska nu i normalfallet hålla sig till rätt terapeuttråd när flera relationer finns för samma patientkonto
+- Terapeutens hopp från dashboard och inskick till meddelandevy bär nu med sig tydligare relationstillhörighet
+- `node --check script.js && node --check playwright-message-relation-thread-check.js` passerar
+
+### Vad som inte fungerar
+- Praktisk browserverifiering kunde inte slutföras i denna körning trots flera försök:
+  - OpenClaws browser-verktyg var otillgängligt eftersom gatewayns browserkoppling timeoutade
+  - lokal Playwright/Chromium fallerade i miljön på grund av OS-/browserproblem (`dyld`/CoreAudio-symbolfel för bundlad Chromium)
+  - systemets Chrome gick att starta men gav inte en stabil användbar testsession för denna körning
+- Därför är den här iterationen främst verifierad via kodgranskning, syntaxkontroll och riktat testskript som förberedelse, inte via fullt passerande browser-E2E i just denna miljö
+- Det finns fortfarande ingen realtidsuppdatering mellan två öppna sessioner; omladdning eller ny fetch krävs fortfarande för att extern aktivitet ska slå igenom direkt
+
+### Nästa steg
+- När browsermiljön går att använda igen: kör det riktade flerterapeutstestet praktiskt och bekräfta att patientens svar verkligen stannar i rätt relationstråd end-to-end
+- Därefter är ett bra nästa lilla steg en mycket liten refresh-/resync-rutin för dashboard och meddelandeytor efter extern aktivitet, utan att införa tung realtidsarkitektur

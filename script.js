@@ -294,6 +294,7 @@ function initMaterialBuilder() {
     suppressLibraryClickUntil: 0,
     assignedPatientId: patients[0].id,
     activeClientPatientId: patients[0].id,
+    activeClientTherapistUserId: '',
     activeAssignmentId: null,
     activeSubmissionId: null,
     activeTherapistThreadPatientId: patients[0].id,
@@ -599,6 +600,37 @@ function initMaterialBuilder() {
     return ensureMessageThreads();
   }
 
+  function getThreadRelationKey(patientId, therapistUserId = '') {
+    return `${patientId || 'unknown-patient'}::${therapistUserId || 'unassigned-therapist'}`;
+  }
+
+  function getThreadTherapistUserId(thread) {
+    return String(thread?.therapistUserId || '');
+  }
+
+  function getThreadRelationKeyFromThread(thread) {
+    return getThreadRelationKey(thread?.patientId || '', getThreadTherapistUserId(thread));
+  }
+
+  function findThreadByRelation(patientId, therapistUserId = '') {
+    return getMessageThreads().find(thread => getThreadRelationKeyFromThread(thread) === getThreadRelationKey(patientId, therapistUserId)) || null;
+  }
+
+  function getPreferredClientThread() {
+    const clientPatientId = getCurrentClientPatientId();
+    const threads = getMessageThreads().filter(thread => thread.patientId === clientPatientId);
+    if (!threads.length) return null;
+
+    const preferredTherapistUserId = state.activeClientTherapistUserId || '';
+    const exactMatch = preferredTherapistUserId
+      ? threads.find(thread => getThreadTherapistUserId(thread) === preferredTherapistUserId)
+      : null;
+    const latestThread = [...threads].sort((a, b) => getThreadLatestTimestamp(b) - getThreadLatestTimestamp(a))[0] || threads[0];
+    const selectedThread = exactMatch || latestThread;
+    state.activeClientTherapistUserId = getThreadTherapistUserId(selectedThread);
+    return selectedThread;
+  }
+
   async function saveAssignedItems(items) {
     state.serverAssigned = items;
     if (!getAuthToken()) return items;
@@ -858,6 +890,7 @@ function initMaterialBuilder() {
   function ensureMessageThreads() {
     const currentClientProfile = patientProfileFromUser(state.currentUser);
     if (Array.isArray(state.serverMessages) && state.serverMessages.length) {
+      state.serverMessages = dedupeThreadsByRelation(state.serverMessages);
       if (currentClientProfile && !state.serverMessages.some(item => item.patientId === currentClientProfile.id)) {
         state.serverMessages.unshift(createMessageThread(currentClientProfile, []));
       }
@@ -865,11 +898,11 @@ function initMaterialBuilder() {
     }
     const existing = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
     if (existing.length) {
-      state.serverMessages = existing;
+      state.serverMessages = dedupeThreadsByRelation(existing);
       if (currentClientProfile && !state.serverMessages.some(item => item.patientId === currentClientProfile.id)) {
         state.serverMessages.unshift(createMessageThread(currentClientProfile, []));
       }
-      return existing;
+      return state.serverMessages;
     }
 
     if (getAuthToken()) {
@@ -902,6 +935,34 @@ function initMaterialBuilder() {
     };
   }
 
+  function dedupeThreadsByRelation(threads) {
+    const deduped = [];
+    const indexByRelation = new Map();
+    (Array.isArray(threads) ? threads : []).forEach(thread => {
+      const normalizedThread = {
+        ...thread,
+        therapistUserId: getThreadTherapistUserId(thread),
+        therapistName: thread?.therapistName || 'Dr. Lindgren',
+        messages: Array.isArray(thread?.messages) ? thread.messages : []
+      };
+      const relationKey = getThreadRelationKeyFromThread(normalizedThread);
+      const existingIndex = indexByRelation.get(relationKey);
+      if (existingIndex === undefined) {
+        indexByRelation.set(relationKey, deduped.length);
+        deduped.push(normalizedThread);
+        return;
+      }
+
+      const existingThread = deduped[existingIndex];
+      const existingLatest = getThreadLatestTimestamp(existingThread);
+      const nextLatest = getThreadLatestTimestamp(normalizedThread);
+      if (nextLatest > existingLatest || (nextLatest === existingLatest && normalizedThread.messages.length > existingThread.messages.length)) {
+        deduped[existingIndex] = normalizedThread;
+      }
+    });
+    return deduped;
+  }
+
   function getThreadLatestTimestamp(thread, author = '') {
     const messages = Array.isArray(thread?.messages) ? thread.messages : [];
     const filtered = author ? messages.filter(message => message.author === author) : messages;
@@ -922,7 +983,9 @@ function initMaterialBuilder() {
 
   async function markThreadRead(patientId, viewer) {
     const threads = getMessageThreads();
-    const thread = threads.find(item => item.patientId === patientId);
+    const thread = viewer === 'client'
+      ? (findThreadByRelation(patientId, state.activeClientTherapistUserId) || getPreferredClientThread())
+      : (findThreadByRelation(patientId, getCurrentTherapistIdentity().therapistUserId) || threads.find(item => item.patientId === patientId));
     if (!thread) return;
     const latestIncomingTimestamp = viewer === 'therapist'
       ? getThreadLatestTimestamp(thread, 'client')
@@ -961,11 +1024,18 @@ function initMaterialBuilder() {
       return;
     }
     const threads = getMessageThreads();
-    let thread = threads.find(item => item.patientId === patientId);
+    const targetTherapistUserId = author === 'client'
+      ? (state.activeClientTherapistUserId || getThreadTherapistUserId(getPreferredClientThread()))
+      : getCurrentTherapistIdentity().therapistUserId;
+    let thread = findThreadByRelation(patientId, targetTherapistUserId);
     if (!thread) {
       const patient = getKnownPatients().find(item => item.id === patientId) || createPatientProfile(patientId, patientLabel(patientId));
       thread = createMessageThread(patient, [], {
-        patientUserId: patient.userId || null
+        patientUserId: patient.userId || null,
+        therapistUserId: targetTherapistUserId,
+        therapistName: author === 'client'
+          ? (getPreferredClientThread()?.therapistName || getCurrentTherapistIdentity().therapistName)
+          : getCurrentTherapistIdentity().therapistName
       });
       threads.unshift(thread);
     }
@@ -979,6 +1049,9 @@ function initMaterialBuilder() {
     }
     try {
       await saveMessageThreads(threads);
+      if (author === 'client') {
+        state.activeClientTherapistUserId = getThreadTherapistUserId(thread);
+      }
       await loadDashboardSummary();
       renderSavedCollections();
       renderDashboardOverview();
@@ -1027,6 +1100,7 @@ function initMaterialBuilder() {
       button.addEventListener('click', async () => {
         state.activeTherapistThreadPatientId = thread.patientId;
         state.activeClientPatientId = thread.patientId;
+        state.activeClientTherapistUserId = getThreadTherapistUserId(thread);
         renderMessages();
         await markThreadRead(thread.patientId, 'therapist');
       });
@@ -1035,8 +1109,11 @@ function initMaterialBuilder() {
   }
 
   function renderTherapistConversation() {
-    const thread = getMessageThreads().find(item => item.patientId === state.activeTherapistThreadPatientId);
+    const therapistUserId = getCurrentTherapistIdentity().therapistUserId;
+    const thread = findThreadByRelation(state.activeTherapistThreadPatientId, therapistUserId)
+      || getMessageThreads().find(item => item.patientId === state.activeTherapistThreadPatientId);
     if (!thread) return;
+    state.activeClientTherapistUserId = getThreadTherapistUserId(thread);
     if (els.therapistThreadTitle) els.therapistThreadTitle.textContent = thread.patientName;
     if (els.therapistThreadSubtitle) els.therapistThreadSubtitle.textContent = `Säker tråd kopplad till ${thread.patientId}. Här kan terapeuten läsa och svara i samma flöde.`;
     if (els.therapistThreadStatus) {
@@ -1049,10 +1126,10 @@ function initMaterialBuilder() {
   }
 
   function renderClientConversation() {
-    const clientPatientId = getCurrentClientPatientId();
-    const thread = getMessageThreads().find(item => item.patientId === clientPatientId) || getMessageThreads()[0];
+    const thread = getPreferredClientThread() || getMessageThreads()[0];
     if (!thread) return;
     state.activeClientPatientId = thread.patientId;
+    state.activeClientTherapistUserId = getThreadTherapistUserId(thread);
     if (els.clientThreadTitle) els.clientThreadTitle.textContent = `Kontakt med ${thread.therapistName}`;
     if (els.clientThreadSubtitle) els.clientThreadSubtitle.textContent = `${thread.patientName} kan skriva frågor, status och reflektioner här i ett enkelt första flöde med ${thread.therapistName}.`;
     const unreadCount = getUnreadCountForViewer(thread, 'client');
@@ -1880,6 +1957,8 @@ function initMaterialBuilder() {
       openThreadButton?.addEventListener('click', () => {
         state.activeTherapistThreadPatientId = row.patient.id;
         state.activeClientPatientId = row.patient.id;
+        const matchingThread = findThreadByRelation(row.patient.id, getCurrentTherapistIdentity().therapistUserId);
+        state.activeClientTherapistUserId = getThreadTherapistUserId(matchingThread);
         renderMessages();
         document.querySelector('#therapist-view .nav-item[data-page="messages"]')?.click();
       });
@@ -2211,6 +2290,8 @@ function initMaterialBuilder() {
       secondaryButton.addEventListener('click', () => {
         state.activeTherapistThreadPatientId = item.patientId;
         state.activeClientPatientId = item.patientId;
+        const matchingThread = findThreadByRelation(item.patientId, item.therapistUserId || getCurrentTherapistIdentity().therapistUserId);
+        state.activeClientTherapistUserId = getThreadTherapistUserId(matchingThread);
         renderMessages();
         document.querySelector('#therapist-view .nav-item[data-page="messages"]')?.click();
       });
