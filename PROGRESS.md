@@ -614,6 +614,47 @@
 - Därefter är nästa rimliga tydliga del att bygga en enkel explicit terapeut–patientkoppling i backend så patienturval, trådar, tilldelningar och inskick kan begränsas till riktiga relationer i stället för alla registrerade klientkonton
 - Alternativt koppla patientens `Mitt material` till verkligt tilldelat servermaterial så hela kedjan terapeut → tilldelning → patientmaterial blir ännu mer sammanhängande
 
+## 2026-05-07 — Patientens “Mitt material” bygger nu på verkligt tilldelat servermaterial
+
+### Vad jag arbetade med
+- En avgränsad del: patientvyn `Mitt material`
+- Målet var att sluta visa seedade klientkort där och i stället låta vyn bygga på verkligt auth-backat, serverpersistat och tilldelat material
+
+### Vad jag ändrade
+- Bytte renderingen i `script.js` så patientens materiallista nu läser direkt från serverpersistade `assigned`-objekt för inloggad patient
+- Tog bort beroendet av seedade klientmaterialkort i den auth-backade patientvyn
+- Lade till tomt läge när inget material ännu delats av terapeut
+- Lade till riktiga materialkort för patienten med:
+  - terapeutnamn
+  - antal block
+  - tilldelningstid
+  - aktuell status
+  - knappar för att öppna materialet eller skicka in igen
+- Lät kortens primäråtgärd öppna samma riktiga uppgifts-/materialvy som används i hemuppgiftsflödet
+- Uppdaterade login-sidans synliga tidsstämpel enligt projektregeln
+- Lade till riktat Playwright-test `playwright-client-materials-server-check.js`
+- Sparade QA-skärmdumpar i `qa-artifacts/client-materials-server-desktop.png` och `qa-artifacts/client-materials-server-mobile.png`
+
+### Vad som nu fungerar
+- Patientens `Mitt material` visar nu verkligt tilldelat material från backend i stället för seedade exempelkort
+- Vyn är kopplad till inloggad patient och överlever omladdning via samma serverpersistens som övriga auth-backade flöden
+- Korten visar nu begriplig terapeutkoppling och status direkt i patientens materialöversikt
+- Patienten kan öppna delat material direkt från `Mitt material` och komma in i det riktiga formulär-/svarsläget
+- Praktiskt test verifierade:
+  - desktop 1440×900: registrera terapeut + patient → länka patient → tilldela material → verifiera att auth-backad kedja finns kvar i terapeutflödet
+  - mobil 390×844: logga in som samma patient → öppna `Mitt material` → se verkligt delat material från rätt terapeut → öppna materialet → ladda om och se att det ligger kvar
+- `node --check server.js && node --check script.js && node --check playwright-client-materials-server-check.js` passerar
+- Praktisk end-to-end-körning passerade mot lokal Node-server på port `4321`
+
+### Vad som inte fungerar
+- `Mitt material` bygger ännu på tilldelade objekt, inte på en separat mer genomtänkt modell för publicerat patientmaterial kontra hemuppgift
+- Seedad klientmaterialdata finns fortfarande kvar i koden som demoresurs, men används inte längre i det auth-backade patientflödet här
+- Browser-verktyget användes inte i denna körning heller; praktisk verifiering gjordes med lokal Playwright eftersom tidigare browser-attach varit opålitlig för appen
+
+### Nästa steg
+- Nästa rimliga tydliga del är att skilja på `delat läsmaterial` och `hemuppgift att fylla i`, så patientens materialvy kan visa båda utan att allt ser ut som samma objekttyp
+- Alternativt bygga en liten `Mina patienter`-översikt för terapeuten där länkade relationer, senaste aktivitet och antal delade material blir synliga utanför tilldelningsmodalen
+
 ## 2026-05-07 — Explicit terapeut–patientkoppling i auth-backad tilldelning
 
 ### Vad jag arbetade med

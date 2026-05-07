@@ -1822,11 +1822,46 @@ function initMaterialBuilder() {
   function renderClientMaterials() {
     if (!els.clientMaterialsGrid) return;
     els.clientMaterialsGrid.innerHTML = '';
-    clientMaterialSeed.forEach(item => els.clientMaterialsGrid.appendChild(createLibraryCard(item.title, item.description)));
-    const assigned = getAssignedItems().filter(item => item.patientId === state.activeClientPatientId);
+    const assigned = getAssignedItems()
+      .filter(item => item.patientId === state.activeClientPatientId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    if (!assigned.length) {
+      const currentPatientName = getKnownPatients().find(item => item.id === state.activeClientPatientId)?.name || 'dig';
+      els.clientMaterialsGrid.innerHTML = `<div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Tom vy</span><h3>Inget delat material ännu</h3></div></div><p>När terapeuten delar material med ${escapeHtml(currentPatientName)} visas det här som verkliga serverpersistade objekt, i stället för seedade exempelkort.</p><div class="library-card-meta"><span>Kopplat till konto</span><span>Redo att öppnas</span></div></div>`;
+      return;
+    }
+
     assigned.forEach(item => {
-      els.clientMaterialsGrid.appendChild(createLibraryCard(item.title, `${item.patientName} · ${item.blocks.length} block · status ${item.status}`));
+      els.clientMaterialsGrid.appendChild(createClientMaterialCard(item));
     });
+  }
+
+  function createClientMaterialCard(item) {
+    const card = createLibraryCard({
+      title: item.title,
+      description: `${item.therapistName || 'Behandlare'} · ${item.blocks.length} block · tilldelad ${item.createdAt}`,
+      meta: [
+        `Status ${item.status || 'tilldelad'}`,
+        item.feedback?.text ? 'Ny återkoppling finns' : 'Öppna och arbeta i lugn takt',
+        `För ${item.patientName}`
+      ],
+      type: 'Delat material'
+    });
+
+    card.querySelector('.library-card-head')?.insertAdjacentHTML('beforeend', `<span class="status-pill status-${escapeAttribute(item.status || 'tilldelad')}">${escapeHtml(item.status || 'tilldelad')}</span>`);
+
+    const [primaryButton, secondaryButton] = card.querySelectorAll('button');
+    if (primaryButton) {
+      primaryButton.textContent = item.status === 'tilldelad' ? 'Öppna material' : item.status === 'påbörjad' ? 'Fortsätt arbeta' : 'Öppna svar';
+      primaryButton.addEventListener('click', () => openAssignment(item.id));
+    }
+    if (secondaryButton) {
+      secondaryButton.textContent = item.status === 'inskickad' || item.status === 'granskad' ? 'Skicka in igen' : 'Skicka in till terapeut';
+      secondaryButton.addEventListener('click', () => submitAssignment(item.id));
+    }
+
+    return card;
   }
 
   async function submitAssignment(assignmentId) {
