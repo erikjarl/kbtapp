@@ -124,7 +124,7 @@ function publicUser(user) {
 function getLinkedClientUserIds(db, therapistUserId) {
   return new Set(
     (db.relationships || [])
-      .filter(item => item?.therapistUserId === therapistUserId && item?.clientUserId)
+      .filter(item => item?.therapistUserId === therapistUserId && item?.clientUserId && (item?.status || 'accepted') === 'accepted')
       .map(item => item.clientUserId)
   );
 }
@@ -144,10 +144,24 @@ function createRelationship(db, therapist, client) {
     therapistName: therapist.name,
     clientUserId: client.id,
     clientName: client.name,
+    status: 'pending',
     createdAt: new Date().toISOString()
   };
   db.relationships.push(relationship);
   return relationship;
+}
+
+function publicRelationship(relationship) {
+  return {
+    id: relationship.id,
+    therapistUserId: relationship.therapistUserId,
+    therapistName: relationship.therapistName,
+    clientUserId: relationship.clientUserId,
+    clientName: relationship.clientName,
+    status: relationship.status || 'accepted',
+    createdAt: relationship.createdAt,
+    respondedAt: relationship.respondedAt || ''
+  };
 }
 
 function getClientPatientId(user) {
@@ -333,9 +347,66 @@ async function handleApi(req, res, pathname) {
       }
 
       const relationship = createRelationship(sessionData.db, sessionData.user, client);
+      relationship.therapistName = sessionData.user.name;
+      relationship.clientName = client.name;
       writeDb(sessionData.db);
-      return sendJson(res, 201, { relationship, client: publicUser(client) });
+      return sendJson(res, 201, {
+        relationship: publicRelationship(relationship),
+        client: publicUser(client),
+        requestPending: (relationship.status || 'accepted') !== 'accepted'
+      });
     }
+  }
+
+  if (pathname === '/api/relationships/requests') {
+    const sessionData = getSessionUser(req);
+    if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
+    if (req.method !== 'GET') {
+      return sendJson(res, 405, { error: 'Method not allowed' });
+    }
+
+    const requests = (sessionData.db.relationships || []).filter(item => {
+      if ((item?.status || 'accepted') !== 'pending') return false;
+      if (sessionData.user.role === 'therapist') return item.therapistUserId === sessionData.user.id;
+      if (sessionData.user.role === 'client') return item.clientUserId === sessionData.user.id;
+      return false;
+    }).map(publicRelationship);
+
+    return sendJson(res, 200, { requests });
+  }
+
+  if (pathname === '/api/relationships/respond') {
+    const sessionData = getSessionUser(req);
+    if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
+    if (sessionData.user.role !== 'client') {
+      return sendJson(res, 403, { error: 'Endast patienter kan svara på kopplingsförfrågningar.' });
+    }
+    if (req.method !== 'POST') {
+      return sendJson(res, 405, { error: 'Method not allowed' });
+    }
+
+    const body = await parseBody(req);
+    const relationshipId = String(body.relationshipId || '').trim();
+    const action = String(body.action || '').trim().toLowerCase();
+    if (!relationshipId || !['accept', 'decline'].includes(action)) {
+      return sendJson(res, 400, { error: 'relationshipId och giltig action krävs.' });
+    }
+
+    const relationship = (sessionData.db.relationships || []).find(item => item.id === relationshipId && item.clientUserId === sessionData.user.id);
+    if (!relationship) {
+      return sendJson(res, 404, { error: 'Kopplingsförfrågan hittades inte.' });
+    }
+    if ((relationship.status || 'accepted') !== 'pending') {
+      return sendJson(res, 409, { error: 'Förfrågan är redan hanterad.' });
+    }
+
+    relationship.status = action === 'accept' ? 'accepted' : 'declined';
+    relationship.respondedAt = new Date().toISOString();
+    relationship.clientName = sessionData.user.name;
+    const therapist = sessionData.db.users.find(user => user.id === relationship.therapistUserId);
+    if (therapist) relationship.therapistName = therapist.name;
+    writeDb(sessionData.db);
+    return sendJson(res, 200, { relationship: publicRelationship(relationship) });
   }
 
   if (pathname === '/api/data/assigned') {

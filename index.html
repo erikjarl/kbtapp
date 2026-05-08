@@ -102,7 +102,7 @@
       </div>
       <div class="login-footnote">
         <p class="login-note">Konton och lösenord sparas nu lokalt i en enkel backend. Övrig appdata är fortfarande en första version.</p>
-        <p class="login-updated">Uppdaterades: 2026-05-08 01:35 CEST</p>
+        <p class="login-updated">Uppdaterades: 2026-05-08 04:48 CEST</p>
       </div>
     </div>
   </section>
@@ -488,11 +488,23 @@
             <img class="hero-inline-image" src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=1200&auto=format&fit=crop" alt="Positiv och trygg vardag" loading="lazy" />
           </div>
         </div>
-        <div class="dashboard-grid">
+      <div class="dashboard-grid">
           <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="card-stat">2</div><div class="card-label">Nya händelser</div></div>
           <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="card-stat">1</div><div class="card-label">Nya meddelanden</div></div>
           <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M12 14c-4 0-6 2-6 4v2h12v-2c0-2-2-4-6-4z"/></svg></div><div class="card-stat">3</div><div class="card-label">Mina målsättningar</div></div>
           <div class="card"><div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="card-stat">1</div><div class="card-label">Nästa bokade tid</div></div>
+        </div>
+        <div class="card mt-lg" id="client-relationship-requests-card">
+          <div class="page-header compact-header">
+            <div>
+              <span class="section-kicker">Kopplingsförfrågningar</span>
+              <h3>Välj vilka terapeuter som får koppla sig till ditt konto</h3>
+              <p class="sub">När en terapeut anger din registrerade e-post visas förfrågan här innan kopplingen blir aktiv.</p>
+            </div>
+          </div>
+          <div class="assignment-grid" id="client-relationship-requests-grid">
+            <div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Ingen förfrågan</span><h3>Inga väntande kopplingar just nu</h3></div></div><p>När en terapeut försöker koppla sig till ditt konto kan du godkänna eller neka förfrågan här.</p></div>
+          </div>
         </div>
         <div class="row mt-lg">
           <div class="card card-list">
@@ -598,9 +610,9 @@
         <div>
           <label class="field-label" for="link-client-email">Länka registrerad patient via e-post</label>
           <input id="link-client-email" class="form-control" type="email" placeholder="patient@exempel.se" autocomplete="email" />
-          <p class="sub" id="link-client-feedback" style="margin-top: 0.5rem;">Patienten behöver redan ha skapat sitt konto innan du länkar.</p>
+          <p class="sub" id="link-client-feedback" style="margin-top: 0.5rem;">Patienten behöver redan ha skapat sitt konto. En kopplingsförfrågan skickas sedan till patienten för godkännande.</p>
         </div>
-        <button class="builder-action" type="button" id="link-client-button">Länka patientkonto</button>
+        <button class="builder-action" type="button" id="link-client-button">Skicka kopplingsförfrågan</button>
       </div>
       <div class="modal-actions">
         <button class="builder-action" type="button" data-close-modal="assign">Avbryt</button>

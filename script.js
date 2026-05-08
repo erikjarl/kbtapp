@@ -314,6 +314,7 @@ function initMaterialBuilder() {
     serverDataLoaded: false,
     currentUser: null,
     linkedClients: [],
+    pendingRelationshipRequests: [],
     serverSyncInFlight: false,
     lastServerSyncAt: 0,
     activePageByView: {
@@ -501,19 +502,30 @@ function initMaterialBuilder() {
   async function loadAvailableClients() {
     if (!getAuthToken()) {
       state.linkedClients = [];
+      state.pendingRelationshipRequests = [];
       syncActivePatientState();
       return;
     }
     try {
       if (state.currentUser?.role === 'therapist') {
-        const result = await serverDataRequest('/api/relationships/clients');
+        const [result, pendingResult] = await Promise.all([
+          serverDataRequest('/api/relationships/clients'),
+          serverDataRequest('/api/relationships/requests')
+        ]);
         state.linkedClients = Array.isArray(result.linkedClients) ? result.linkedClients : [];
+        state.pendingRelationshipRequests = Array.isArray(pendingResult.requests) ? pendingResult.requests : [];
+      } else if (state.currentUser?.role === 'client') {
+        const pendingResult = await serverDataRequest('/api/relationships/requests');
+        state.linkedClients = [];
+        state.pendingRelationshipRequests = Array.isArray(pendingResult.requests) ? pendingResult.requests : [];
       } else {
         state.linkedClients = [];
+        state.pendingRelationshipRequests = [];
       }
     } catch (error) {
       console.warn('Kunde inte läsa klientkonton från servern:', error);
       state.linkedClients = [];
+      state.pendingRelationshipRequests = [];
     }
     syncActivePatientState();
   }
@@ -549,11 +561,16 @@ function initMaterialBuilder() {
       const result = await serverDataRequest('/api/relationships/clients', { clientEmail: email }, 'POST');
       await loadAvailableClients();
       await loadDashboardSummary();
-      state.assignedPatientId = `client_${result.client.id}`;
       populatePatientSelect();
       if (input) input.value = '';
-      setLinkClientFeedback(`${result.client.name} är nu länkad till dig.`, 'success');
-      showToast('Patient länkad', result.client.name);
+      if (result.requestPending) {
+        setLinkClientFeedback(`Förfrågan skickad till ${result.client.name}. Patienten behöver godkänna innan du kan tilldela material.`, 'success');
+        showToast('Kopplingsförfrågan skickad', result.client.name);
+      } else {
+        state.assignedPatientId = `client_${result.client.id}`;
+        setLinkClientFeedback(`${result.client.name} är nu länkad till dig.`, 'success');
+        showToast('Patient länkad', result.client.name);
+      }
     } catch (error) {
       setLinkClientFeedback(error.message || 'Kunde inte länka patienten.', 'error');
     } finally {
@@ -850,6 +867,7 @@ function initMaterialBuilder() {
       state.serverMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.messages) || '[]');
       state.serverLibrary = JSON.parse(localStorage.getItem(STORAGE_KEYS.library) || '[]');
       state.serverDashboardSummary = null;
+      state.pendingRelationshipRequests = [];
       syncActivePatientState();
       populatePatientSelect();
     }
@@ -1946,8 +1964,71 @@ function initMaterialBuilder() {
     }
   }
 
+  function renderClientRelationshipRequests() {
+    const grid = document.getElementById('client-relationship-requests-grid');
+    const card = document.getElementById('client-relationship-requests-card');
+    if (!grid || !card) return;
+    const isClient = state.currentUser?.role === 'client';
+    card.style.display = isClient ? '' : 'none';
+    if (!isClient) return;
+
+    const requests = Array.isArray(state.pendingRelationshipRequests) ? state.pendingRelationshipRequests : [];
+    if (!requests.length) {
+      grid.innerHTML = '<div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Ingen förfrågan</span><h3>Inga väntande kopplingar just nu</h3></div></div><p>När en terapeut försöker koppla sig till ditt konto kan du godkänna eller neka förfrågan här.</p></div>';
+      return;
+    }
+
+    grid.innerHTML = '';
+    requests.forEach(request => {
+      const item = document.createElement('div');
+      item.className = 'card library-card';
+      item.innerHTML = `
+        <div class="library-card-head">
+          <div>
+            <span class="library-card-type">Väntar på ditt svar</span>
+            <h3>${escapeHtml(request.therapistName || 'Terapeut')}</h3>
+          </div>
+          <span class="status-pill status-påbörjad">Förfrågan</span>
+        </div>
+        <p>${escapeHtml(request.therapistName || 'En terapeut')} vill koppla sitt konto till dig för att kunna dela material, följa upp uppgifter och skriva i samma tråd.</p>
+        <div class="library-card-meta"><span>Skickad ${escapeHtml(request.createdAt || 'nyligen')}</span><span>Svar krävs från dig</span></div>
+        <div class="builder-toolbar">
+          <button class="builder-action accent" type="button">Godkänn koppling</button>
+          <button class="builder-action" type="button">Neka</button>
+        </div>
+      `;
+      const [acceptButton, declineButton] = item.querySelectorAll('button');
+      acceptButton?.addEventListener('click', async () => {
+        try {
+          await serverDataRequest('/api/relationships/respond', { relationshipId: request.id, action: 'accept' }, 'POST');
+          await loadServerCollections();
+          renderSavedCollections();
+          renderDashboardOverview();
+          renderMessages();
+          showToast('Koppling godkänd', 'Terapeuten kan nu dela material med dig.');
+        } catch (error) {
+          showToast('Kunde inte godkänna', error.message || 'Försök igen.');
+        }
+      });
+      declineButton?.addEventListener('click', async () => {
+        try {
+          await serverDataRequest('/api/relationships/respond', { relationshipId: request.id, action: 'decline' }, 'POST');
+          await loadServerCollections();
+          renderSavedCollections();
+          renderDashboardOverview();
+          renderMessages();
+          showToast('Koppling nekad', 'Förfrågan togs bort.');
+        } catch (error) {
+          showToast('Kunde inte neka', error.message || 'Försök igen.');
+        }
+      });
+      grid.appendChild(item);
+    });
+  }
+
   function renderDashboardOverview() {
     renderDashboardSummaryCards();
+    renderClientRelationshipRequests();
     const list = document.getElementById('therapist-patient-overview-list');
     const summary = document.getElementById('therapist-patient-overview-summary');
     if (!list || !summary) return;

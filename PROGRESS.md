@@ -870,6 +870,54 @@
 - När browsermiljön går att använda igen: kör den riktade resync-kollen praktiskt och verifiera att terapeutens öppna vy plockar upp nytt patientmeddelande efter återfokus eller sidväxling utan full reload
 - Därefter är ett bra nästa lilla steg att göra samma sak mer riktat för dashboardkort och patientens `Mitt material` med ännu tydligare visuell uppdateringstid eller diskret `uppdaterat nyss`-indikator
 
+## 2026-05-08 — Patient måste nu godkänna terapeutkoppling innan relationen blir aktiv
+
+### Vad jag arbetade med
+- En avgränsad del: själva terapeut–patientkopplingen i det auth-backade flödet
+- Målet var att göra riktiga användarkonton mer långsiktigt rimliga genom att sluta länka patientkonton direkt när terapeuten skriver en e-postadress
+
+### Vad jag ändrade
+- Utökade `server.js` så nya terapeut–patientkopplingar skapas som `pending` i stället för att bli aktiva direkt
+- Lade till backendlogik som bara räknar `accepted` relationer som verkligt länkade patienter
+- Lade till nya auth-skyddade API-ytor:
+  - `GET /api/relationships/requests`
+  - `POST /api/relationships/respond`
+- Behöll samma enkla databasfil men utökade relationsposterna med `status` och `respondedAt`
+- Ändrade terapeutens tilldelningsmodal så e-postfältet nu skickar en kopplingsförfrågan i stället för att omedelbart länka patienten
+- Lade till en ny patientsektion på dashboarden där väntande kopplingsförfrågningar kan godkännas eller nekas
+- Lade till frontendstate för väntande relationsförfrågningar i `script.js`
+- Skrev en riktad backend-smoketest `api-relationship-request-check.js`
+- Skrev även ett riktat Playwrightskript `playwright-relationship-request-check.js` som förberedelse för riktig browser-E2E när miljön tillåter det
+- Uppdaterade login-sidans synliga tidsstämpel enligt projektregeln
+
+### Vad som nu fungerar
+- En terapeut kan nu ange en registrerad patients e-post utan att patienten automatiskt blir aktivt länkad
+- Patienten ser nu väntande kopplingsförfrågningar i sin egen vy och kan aktivt godkänna eller neka dem
+- Först efter patientens godkännande blir relationen verkligt länkad och synlig i terapeutens patientval
+- Scope-logiken för `linkedClients` bygger nu på accepterade relationer i stället för alla skapade poster
+- Praktiskt verifierat via riktad backend-smoketest mot lokal Node-server på port `4370`:
+  - registrera terapeutkonto
+  - registrera patientkonto
+  - skapa kopplingsförfrågan som terapeut
+  - verifiera att terapeuten fortfarande har 0 länkade patienter
+  - verifiera att patienten har 1 väntande förfrågan
+  - godkänna som patient
+  - verifiera att terapeuten därefter har 1 länkad patient
+- `node --check server.js && node --check script.js` passerar
+- `node api-relationship-request-check.js` passerar
+
+### Vad som inte fungerar
+- Full praktisk browserverifiering kunde inte slutföras i denna körning:
+  - OpenClaws browser-verktyg kunde inte ansluta till Chrome eftersom debug-port saknades
+  - Playwright mot bundlad Chromium fallerar fortsatt i denna miljö på OS-/CoreAudio-symbolproblem
+  - Playwright mot systemets Chrome nådde inte sidan stabilt nog för E2E i just denna miljö
+- Terapeuten ser ännu inte någon särskild lista över sina skickade men ännu ej accepterade kopplingsförfrågningar, bara frånvaron av länkad patient tills godkännande sker
+- Det finns fortfarande ingen inbjudningskod, e-postutskick eller mer avancerad godkännandehistorik; detta är en enkel första riktiga acceptmodell
+
+### Nästa steg
+- När browsermiljön går att använda igen: kör det förberedda Playwrightflödet end-to-end på desktop och mobil för att verifiera patientens godkännandekort praktiskt
+- Därefter är ett rimligt nästa lilla steg att visa terapeuten egna `väntande patientgodkännanden` i dashboard eller tilldelningsmodal, så läget blir tydligt även före accept
+
 ## 2026-05-07 — Striktare relationstråd i auth-backade meddelanden
 
 ### Vad jag arbetade med
