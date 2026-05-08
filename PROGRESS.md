@@ -1119,6 +1119,55 @@
 - Ett naturligt nästa lilla steg i samma område är att lägga till `markera alla som sedda` eller en diskret toppbarbadge som återanvänder samma auth-backade räknare
 - Alternativt kan samma godkännandedata användas för att lyfta fram nya patienter tydligare i `Mina patienter`-översikten direkt efter accept
 
+## 2026-05-09 — Hang på GitHub Pages reproducerat och static failsafe förstärkt
+
+### Vad jag arbetade med
+- Endast hangsituationen i den publika GitHub Pages-versionen
+- Målet var att reproducera `browser-hang` / `result_code_hung`, isolera om problemet låg i den publika statiska körningen och göra den statiska/failsafe-starten robustare
+
+### Vad jag reproducerade
+- Publika URL:en `https://erikjarl.github.io/kbtapp/#` hängde i Playwright mot systemets Chrome
+- `page.goto(..., waitUntil: 'domcontentloaded')` timeoutade efter 30 sekunder mot den publika URL:en
+- Den publika sidan kunde nås med HTTP 200, men browsern blev kvar i laddning och testsessionen fastnade så hårt att processen till slut dödades
+- Jag verifierade också att en ren statisk lokal server (`python3 -m http.server`) mot samma app kunde trigga samma typ av problem när appen försökte starta full backendberoende init utan säker backendnärvaro
+- Jag identifierade samtidigt en viktig deployskillnad: `origin/main` låg efter lokala commits, och den publika `script.js` som GitHub Pages serverade saknade den tidigare lokala GitHub Pages-failsafen
+
+### Vad jag ändrade
+- Förstärkte startup-logiken i `script.js` så appen inte längre bara litar på exakt hostnamn för att avgöra static public mode
+- Lade till en liten backend-probe mot `/api/auth/session` med timeout (`hasReachableBackend()`)
+- Ändrade boot-sekvensen så appen går till stabilt demoläge om:
+  - hosten är GitHub Pages-host, eller
+  - backend-proben inte hittar en riktig JSON-baserad backend
+- Resultatet är att rena statiska miljöer utan backend nu fail-safe:ar tidigt i stället för att försöka köra full auth-/data-init
+
+### Vad Playwright visade
+- **Publik URL, före publik deploy av fixen:**
+  - `page.goto('https://erikjarl.github.io/kbtapp/#', { waitUntil: 'domcontentloaded' })` timeoutade
+  - med `waitUntil: 'commit'` gick sidan att nå med HTTP 200, men den blev kvar i fastnat laddläge och sessionen dog senare
+- **Lokal statisk server efter nya failsafen:**
+  - `page.goto('http://127.0.0.1:8123/#', { waitUntil: 'domcontentloaded' })` passerade
+  - `document.readyState === 'complete'`
+  - loginvyn visades
+  - auth-knapparna för riktig backend var disable:ade
+  - feedbacktexten visade: `Publik demoläge: den fulla inloggningen kräver backend/servermiljö och är tillfälligt avstängd här för att sidan ska förbli stabil.`
+- **Samma lokala filer, men simulerat GitHub Pages-hostnamn (`erikjarl.github.io`) via host-resolver:**
+  - sidan laddade klart
+  - samma stabila demoläge visades
+  - ingen evig laddning i Playwright
+
+### Vad som fortfarande inte är löst
+- Den faktiska publika GitHub Pages-sidan är fortfarande inte verifierbart stabil ännu, eftersom fixen ännu inte är publicerad där
+- Försök att `git push origin main` från denna miljö blockerades: processen gick inte igenom och GitHub CLI visade samtidigt att lokal GitHub-auth är ogiltig (`gh auth status` rapporterade invalid token)
+- Därför ligger den publika URL:en kvar på en äldre version som fortfarande reproducerar hanget
+
+### Nästa minsta steg mot att eliminera hanget
+- Få giltig GitHub-auth i denna miljö eller låta användaren pusha `main` så att den nya static-failsafe-koden faktiskt når GitHub Pages
+- Så snart publicering skett: köra samma Playwright-kontroll igen direkt mot `https://erikjarl.github.io/kbtapp/#` och verifiera att sidan:
+  - laddar klart
+  - stannar i stabilt demoläge
+  - går att klicka i utan evig laddning
+  - inte längre fastnar i browser-hang/result_code_hung
+
 ## 2026-05-08 — Diskret nav-badge för nya godkända kopplingar i terapeutvyn
 
 ### Vad jag arbetade med

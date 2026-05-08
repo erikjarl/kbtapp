@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const AUTH_STORAGE_KEY = 'kbtapp_auth_token';
   const IS_STATIC_PUBLIC_HOST = window.location.hostname === 'erikjarl.github.io';
+  const STATIC_BACKEND_PROBE_TIMEOUT_MS = 1500;
   const today = new Date().toLocaleDateString('sv-SE', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
@@ -224,6 +225,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  async function hasReachableBackend() {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), STATIC_BACKEND_PROBE_TIMEOUT_MS);
+    try {
+      const response = await fetch('/api/auth/session', {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: controller.signal
+      });
+      const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+      return contentType.includes('application/json') && [200, 401, 403].includes(response.status);
+    } catch (error) {
+      return false;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
   function setupNav(viewElement) {
     const sideNav = viewElement.querySelector('.side-nav');
     const bottomNav = viewElement.querySelector('.bottom-nav');
@@ -284,13 +303,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  if (IS_STATIC_PUBLIC_HOST) {
-    enableStaticPublicMode();
-    return;
+  async function bootstrapApp() {
+    if (IS_STATIC_PUBLIC_HOST || !(await hasReachableBackend())) {
+      enableStaticPublicMode();
+      return;
+    }
+
+    initMaterialBuilder();
+    restoreSession();
   }
 
-  initMaterialBuilder();
-  restoreSession();
+  void bootstrapApp();
 });
 
 function initMaterialBuilder() {
