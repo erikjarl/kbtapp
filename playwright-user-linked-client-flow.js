@@ -1,7 +1,7 @@
 const { chromium, devices } = require('playwright');
 
 const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const baseUrl = process.env.KBTAPP_BASE_URL || 'http://127.0.0.1:4177';
+const baseUrl = process.env.KBTAPP_BASE_URL || 'http://127.0.0.1:4180';
 const password = 'hemligt123';
 
 async function register(page, role, name, email) {
@@ -10,6 +10,7 @@ async function register(page, role, name, email) {
   await page.getByLabel('Namn').fill(name);
   await page.getByLabel('E-post').nth(1).fill(email);
   await page.getByLabel('Lösenord').nth(1).fill(password);
+  await page.getByLabel('Bekräfta lösenord').fill(password);
   await page.getByRole('button', { name: 'Skapa konto' }).click();
 }
 
@@ -55,6 +56,10 @@ async function login(page, role, email) {
   await therapistPage.locator('#settings-content input[type="text"]').first().fill(materialTitle);
   await therapistPage.locator('#assign-patient').click();
   await therapistPage.locator('#patient-select').waitFor();
+  const initialSelectText = await therapistPage.locator('#patient-select').textContent();
+  if (!initialSelectText.includes('registrerat konto')) {
+    throw new Error('Förväntade registrerat konto-markering före första tilldelningen.');
+  }
   await therapistPage.locator('#patient-select').evaluate((select, expectedName) => {
     const option = Array.from(select.options).find(item => item.textContent.includes(expectedName));
     if (!option) throw new Error(`Hittade ingen patientoption för ${expectedName}`);
@@ -63,6 +68,13 @@ async function login(page, role, email) {
   }, clientName);
   await therapistPage.locator('#confirm-assign').click();
   await therapistPage.locator('#toast-area').getByText(/Material tilldelat/i).waitFor();
+  await therapistPage.locator('#assign-patient').click();
+  await therapistPage.locator('#patient-select').waitFor();
+  const linkedSelectText = await therapistPage.locator('#patient-select').textContent();
+  if (!linkedSelectText.includes('min patient')) {
+    throw new Error('Förväntade min patient-markering efter första tilldelningen.');
+  }
+  await therapistPage.getByRole('button', { name: 'Avbryt' }).click();
   await therapistPage.screenshot({ path: 'qa-artifacts/user-linked-client-desktop.png', fullPage: true });
 
   await login(clientPage, 'client', clientEmail);

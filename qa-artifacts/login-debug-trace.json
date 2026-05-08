@@ -1,0 +1,156 @@
+{
+  "result": {
+    "feedback": "Inloggad som t-admin.",
+    "therapistActive": true,
+    "clientActive": false,
+    "loginActive": false,
+    "therapistHeaderName": "t-admin",
+    "localStorageToken": "6ae87490a5789fce49768ba8700f5684d2f3dea909dbdf28",
+    "bodyClasses": ""
+  },
+  "trace": [
+    {
+      "ts": "2026-05-07T18:06:17.663Z",
+      "type": "console",
+      "level": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "ts": "2026-05-07T18:06:20.110Z",
+      "type": "ui-state-before-submit",
+      "feedback": "Vald roll: terapeut.",
+      "roleButtons": [
+        {
+          "text": "Terapeut",
+          "active": true
+        },
+        {
+          "text": "Patient",
+          "active": false
+        }
+      ]
+    },
+    {
+      "ts": "2026-05-07T18:06:20.587Z",
+      "type": "request",
+      "method": "POST",
+      "url": "http://127.0.0.1:4173/api/auth/login",
+      "postData": "{\"email\":\"tadmin@test.se\",\"password\":\"admin1\",\"role\":\"therapist\"}"
+    },
+    {
+      "ts": "2026-05-07T18:06:20.687Z",
+      "type": "console",
+      "level": "warning",
+      "text": "The resource https://images.unsplash.com/photo-1580481054752-058e55c25374?q=80&w=2070&auto=format&fit=crop was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "ts": "2026-05-07T18:06:20.828Z",
+      "type": "request",
+      "method": "GET",
+      "url": "http://127.0.0.1:4173/api/relationships/clients",
+      "postData": null
+    },
+    {
+      "ts": "2026-05-07T18:06:21.024Z",
+      "type": "response",
+      "status": 200,
+      "url": "http://127.0.0.1:4173/api/auth/login",
+      "body": "{\"token\":\"6ae87490a5789fce49768ba8700f5684d2f3dea909dbdf28\",\"user\":{\"id\":\"user_1778170265134_111\",\"name\":\"t-admin\",\"email\":\"tadmin@test.se\",\"role\":\"therapist\",\"createdAt\":\"2026-05-07T16:11:05.134Z\"}}"
+    },
+    {
+      "ts": "2026-05-07T18:06:21.067Z",
+      "type": "request",
+      "method": "GET",
+      "url": "http://127.0.0.1:4173/api/data/assigned",
+      "postData": null
+    },
+    {
+      "ts": "2026-05-07T18:06:21.089Z",
+      "type": "request",
+      "method": "GET",
+      "url": "http://127.0.0.1:4173/api/data/submissions",
+      "postData": null
+    },
+    {
+      "ts": "2026-05-07T18:06:21.089Z",
+      "type": "request",
+      "method": "GET",
+      "url": "http://127.0.0.1:4173/api/data/messages",
+      "postData": null
+    },
+    {
+      "ts": "2026-05-07T18:06:21.090Z",
+      "type": "request",
+      "method": "GET",
+      "url": "http://127.0.0.1:4173/api/data/library",
+      "postData": null
+    },
+    {
+      "ts": "2026-05-07T18:06:21.091Z",
+      "type": "request",
+      "method": "GET",
+      "url": "http://127.0.0.1:4173/api/dashboard/therapist-summary",
+      "postData": null
+    },
+    {
+      "ts": "2026-05-07T18:06:21.104Z",
+      "type": "response",
+      "status": 200,
+      "url": "http://127.0.0.1:4173/api/relationships/clients",
+      "body": "{\"linkedClients\":[]}"
+    },
+    {
+      "ts": "2026-05-07T18:06:21.124Z",
+      "type": "console",
+      "level": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "ts": "2026-05-07T18:06:21.127Z",
+      "type": "response",
+      "status": 200,
+      "url": "http://127.0.0.1:4173/api/data/assigned",
+      "body": "{\"items\":[]}"
+    },
+    {
+      "ts": "2026-05-07T18:06:21.134Z",
+      "type": "console",
+      "level": "warning",
+      "text": "Kunde inte läsa behandlingsdata från servern: Error: Not found\n    at serverDataRequest (http://127.0.0.1:4173/script.js:418:29)\n    at async Promise.all (index 4)\n    at async loadServerCollections (http://127.0.0.1:4173/script.js:682:99)\n    at async HTMLDocument.<anonymous> (http://127.0.0.1:4173/script.js:737:7)"
+    },
+    {
+      "ts": "2026-05-07T18:06:21.139Z",
+      "type": "response",
+      "status": 200,
+      "url": "http://127.0.0.1:4173/api/data/submissions",
+      "body": "{\"items\":[]}"
+    },
+    {
+      "ts": "2026-05-07T18:06:21.140Z",
+      "type": "response",
+      "status": 200,
+      "url": "http://127.0.0.1:4173/api/data/messages",
+      "body": "{\"items\":[]}"
+    },
+    {
+      "ts": "2026-05-07T18:06:21.140Z",
+      "type": "response",
+      "status": 200,
+      "url": "http://127.0.0.1:4173/api/data/library",
+      "body": "{\"items\":[]}"
+    },
+    {
+      "ts": "2026-05-07T18:06:21.140Z",
+      "type": "response",
+      "status": 404,
+      "url": "http://127.0.0.1:4173/api/dashboard/therapist-summary",
+      "body": "{\"error\":\"Not found\"}"
+    },
+    {
+      "ts": "2026-05-07T18:06:24.925Z",
+      "type": "console",
+      "level": "warning",
+      "text": "The resource https://images.unsplash.com/photo-1580481054752-058e55c25374?q=80&w=2070&auto=format&fit=crop was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    }
+  ]
+}

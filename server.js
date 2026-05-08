@@ -543,6 +543,10 @@ async function handleApi(req, res, pathname) {
 
     recentActivity.sort((a, b) => getTimestamp(b.timestamp) - getTimestamp(a.timestamp));
 
+    const pendingRequestCount = (sessionData.db.relationships || [])
+      .filter(item => item?.therapistUserId === sessionData.user.id && (item?.status || 'accepted') === 'pending')
+      .length;
+
     return sendJson(res, 200, {
       summary: {
         linkedPatients: linkedClients.length,
@@ -552,6 +556,7 @@ async function handleApi(req, res, pathname) {
         waitingReplyThreads: waitingReplyThreads.length,
         newEvents: pendingSubmissions.length + unreadMessageThreads.length + recentAssignments.length,
         assignedCount: assignedItems.length,
+        pendingRequestCount: pendingRequestCount,
         recentActivity: recentActivity.slice(0, 3)
       }
     });

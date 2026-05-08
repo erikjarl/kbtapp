@@ -111,7 +111,7 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 
 /* === Main / general cards === */
 .app-main{margin-left:240px;padding:20px 24px 80px;flex:1}
-.therapist-hero .hero-copy,.patient-hero .hero-copy,.builder-intro,.library-summary,.care-flow-card,.patient-spotlight-card,.integration-note{backdrop-filter:blur(4px)}
+.therapist-hero .hero-copy,.patient-hero .hero-copy,.builder-intro,.library-summary,.care-flow-card,.patient-spotlight-card,.pending-patient-requests-card,.integration-note{backdrop-filter:blur(4px)}
 .page{display:none;position:relative;padding:10px 0 2px;isolation:isolate}
 .page.active{display:block}
 .page::before,.page::after{content:'';position:absolute;pointer-events:none;z-index:0}
@@ -170,6 +170,16 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .patient-overview-activity strong{font-size:.86rem}
 .patient-overview-activity small{color:#6b645e}
 .patient-overview-actions{display:flex;flex-wrap:wrap;gap:8px}
+.pending-patient-requests-card{display:flex;flex-direction:column}
+.pending-requests-status{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.pending-requests-status span{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#f6f2eb;color:#9a7a4d;font-size:.78rem;font-weight:600}
+.pending-requests-list{display:grid;gap:10px}
+.pending-request-info{display:flex;flex-direction:column;gap:3px}
+.pending-request-info strong{font-size:.92rem}
+.pending-request-info small{color:#6b645e}
+.pending-request-actions{display:flex;align-items:center}
+.pending-request-note{font-size:.85rem;color:#6b645e;line-height:1.5}
+.pending-request-note p{margin:0}
 .spotlight-row-empty{display:grid;justify-content:stretch}
 .library-page-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-end}
 .library-summary{min-width:260px;padding:18px 20px;border-radius:28px;background:linear-gradient(180deg,#fff9f4,#fdfdfb)}

@@ -207,6 +207,26 @@ Varje block har knappar för att:
 
 När arbete fortsätter via DM med Nils:
 
+**Playwright-status för Nils via Discord-DM:**
+- Playwright ska användas via **systemets installerade Google Chrome**, inte via den nedladdade bundled Chromium-versionen.
+- Fungerande executable path:
+  - `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`
+- Om browsergranskning, UX-test eller debugging ska göras i detta projekt ska Nils i första hand köra Playwright mot den executable-pathen.
+- Enkel verifiering som fungerat i workspace:
+
+```bash
+node -e "const { chromium } = require('playwright'); (async()=>{ const browser = await chromium.launch({ headless:true, executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' }); const page = await browser.newPage(); await page.goto('data:text/html,<title>ok</title><h1>ok</h1>'); console.log(await page.title()); await browser.close(); })().catch(err=>{ console.error(err); process.exit(1); });"
+```
+
+- För lokal testning av KBTApp används normalt:
+
+```bash
+cd /Users/erikjarl/.openclaw/workspace/kbtapp
+python3 -m http.server 8789
+```
+
+- Om Playwright i någon session rapporteras som "trasigt" ska första antagandet **inte** vara att Playwright saknas, utan att fel browserbinary användes eller att lokal browser-attach blandades ihop med Playwright-körning mot systemets Chrome.
+
 1. **Utgå från nuvarande stabila omordningsmodell** med flyttknappar
 2. Gå inte tillbaka till native HTML5 DnD för intern blocksortering utan mycket god anledning
 3. Fokusera i stället på:
@@ -218,6 +238,7 @@ När arbete fortsätter via DM med Nils:
    - bättre styling och informationshierarki
 4. Om drag/drop ska återintroduceras senare bör det i så fall ske som en helt annan teknisk lösning, inte bara ytterligare små justeringar på tidigare native DnD-spår
 5. **Efter varje större frontendändring ska projektet alltid utvärderas praktiskt i webbläsare med Playwright** (minst mobil + desktop när relevant), och agenten ska därefter göra minst **1 och högst 2 egna förbättringsvarv** om resultatet inte ser tillräckligt bra ut innan arbetet lämnas tillbaka
+6. **Temporära QA-/screenshot-filer ska normalt raderas efter användning**. De får gärna genereras under granskning för att hitta problem och verifiera fixar, men ska inte lämnas kvar lokalt eller i repot om det inte finns ett uttryckligt skäl att spara dem
 5. Tänk redan nu på framtida konvertering till iPhone- och Android-app när nya UI-flöden och komponenter byggs
 
 ---

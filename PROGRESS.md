@@ -946,6 +946,56 @@
 - Därför är den här iterationen främst verifierad via kodgranskning, syntaxkontroll och riktat testskript som förberedelse, inte via fullt passerande browser-E2E i just denna miljö
 - Det finns fortfarande ingen realtidsuppdatering mellan två öppna sessioner; omladdning eller ny fetch krävs fortfarande för att extern aktivitet ska slå igenom direkt
 
+## 2026-05-08 — Terapeuten ser nu skickade kopplingsförfrågningar
+
+### Vad jag arbetade med
+- Ett direkt uppföljningssteg till föregående iteration: visa terapeutens skickade men ännu ej godkända patientförfrågningar tydligt i dashboarden
+- Både frontend (HTML + JS + CSS) och backend (dashboard-API) ändrades
+
+### Vad jag ändrade
+**index.html**
+- Lade till en ny sektion `#therapist-pending-requests-card` i terapeutens dashboard, direkt efter patientöversiktskortet
+- Kortet är dolt som standard (`display:none`) och visas bara när det finns väntande förfrågningar
+- Innehåller: rubrik som förklarar att patienten måste godkänna, statusrad med antal, lista över förfrågningar samt en informativ not om vad som händer härnäst
+
+**script.js**
+- Lade till `renderTherapistPendingRequests()` som:
+  - Läser `state.pendingRelationshipRequests`
+  - Visar kortet och renderar en spotlight-row per förfrågan med patientnamn, datum och status-pill
+  - Döljer kortet om rollen inte är terapeut eller inga förfrågningar finns
+- Kopplade in funktionen i `renderDashboardOverview()`, direkt efter `renderDashboardSummaryCards()`
+- Lade till `pendingRequestCount` som prioritet 2 i fokusvytexten (visas när det finns pending-requests men inga linked patients än)
+- Lade till `renderDashboardOverview()`-anrop i `linkClientByEmail()` efter `loadAvailableClients()` + `loadDashboardSummary()` så dashboarden uppdateras direkt efter att en förfrågan skickats
+
+**server.js**
+- Lade till `pendingRequestCount` i dashboard-sammanfattningens API-svar (`GET /api/dashboard/therapist-summary`)
+- Räknar `pending`-relationer där terapeuten är avsändare
+
+**styles.css**
+- Lade till CSS för `.pending-patient-requests-card`, `.pending-requests-status`, `.pending-requests-list`, `.pending-request-info`, `.pending-request-actions`, `.pending-request-note`
+- Registrerade kortet i `backdrop-filter`-listan
+
+### Vad som nu fungerar
+- En terapeut som skickat kopplingsförfrågningar ser dem i en separat sektion på dashboarden
+- Fokusvyn visar relevant text (". N kopplingsförfrågningar väntar på svar") när det finns förfrågningar men inga länkade patienter än
+- Kortet uppdateras automatiskt efter att en förfrågan skickats (via `linkClientByEmail`-flödet)
+- Kortet försvinner när patienten godkänt (via `loadServerCollections` → `renderDashboardOverview`)
+- Backend-API fullt verifierat med curl:
+  - Registrering av terapeut och patient
+  - Länkning via e-post → `requestPending: true`
+  - `GET /api/relationships/requests` returnerar 1 pending request för terapeuten med clientName
+  - Dashboard summary innehåller `pendingRequestCount: 1` och `linkedPatients: 0`
+  - Patientens pending requests fungerar också
+- `node --check server.js && node --check script.js` passerar
+
+### Vad som inte fungerar
+- Full praktisk browserverifiering kunde inte slutföras i denna miljö (Playwright/Chromium fallerar på macOS 10.16/11.+, OpenClaws browser-verktyg har ingen aktiv Chrome-debug-session)
+- Det finns ingen möjlighet för terapeuten att manuellt återkalla en skickad förfrågan (kräver nytt API och UI för det)
+- Förfrågningsinformationen är minimal (bara patientnamn + datum). Ingen e-postadress eller annan identifiering visas
+- Inget push-meddelande skickas till terapeuten när patienten äntligen godkänner
+
 ### Nästa steg
-- När browsermiljön går att använda igen: kör det riktade flerterapeutstestet praktiskt och bekräfta att patientens svar verkligen stannar i rätt relationstråd end-to-end
-- Därefter är ett bra nästa lilla steg en mycket liten refresh-/resync-rutin för dashboard och meddelandeytor efter extern aktivitet, utan att införa tung realtidsarkitektur
+- När browsermiljön fungerar: kör hela terapeut → skicka förfrågan → patient → godkänn-flödet end-to-end på desktop och mobil
+- Nästa iterativa steg: ge terapeuten möjlighet att återkalla en skickad förfrågan, eller visa e-postadress för förfrågan
+- Därefter: en enkel notifiering när patienten godkänner (en badge/siffra på dashboard eller en toast)
+- Fortsätt sedan med den övergripande helheten: se till att all data som ändras lagras auth-bakat, inklusive tilldelningar, inskick och meddelanden

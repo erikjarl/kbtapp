@@ -3,6 +3,10 @@
 ## Syfte
 Under en begränsad vecka färdigställa ett första fullt fungerande utkast av KBTApp där frontendens synliga funktioner faktiskt fungerar och en enkel backend finns för grundflöden.
 
+## Huvudmål
+**HUVUDMÅLET ÄR ATT JOBBA KLART MED KBTAPP.**
+Du har fria händer att jobba klart med hemsidan så att den når full funktionalitet både för terapeutdelen och patientdelen samt interaktionen mellan dessa delar. Detta inkluderar att kunna skapa användare med lösenord som lagras samt att alla förändringar och data som ändras lagras.
+
 ## Principer
 - Enkelhet före perfektion
 - Testbar helhet före komplett produkt
@@ -13,11 +17,11 @@ Under en begränsad vecka färdigställa ett första fullt fungerande utkast av 
 
 ## Tekniska antaganden
 - Nuvarande projekt är i huvudsak frontend
-- En enkel lokal backend kan behöva införas
+- En enkel lokal backend behöver sannolikt införas för att nå huvudmålet
 - Acceptabel första nivå:
   - enkel Node-baserad server eller liknande lätt lokal lösning
-  - lätt persistence eller in-memory + enkel fil-lagring
-  - mock-data där det räcker
+  - lätt persistence eller fil-lagring så att användare, lösenord och ändrad data faktiskt sparas
+  - mock-data där det räcker, men verklig lagring ska införas där flödet kräver det
 
 ## Veckomål
 ### 1. Autentisering
@@ -46,6 +50,9 @@ Under en begränsad vecka färdigställa ett första fullt fungerande utkast av 
 ---
 
 ## Planerade iterationer per cron-körning
+
+### Viktig styrregel för cronjobbet
+Vid varje cronkörning har agenten också auktoritet att **justera själva cron-instruktionen/prompten för nästa körning** om det hjälper nästa iteration att börja rätt i planeringen. Syftet är att nästa trigger tydligare ska veta var arbetet ska fortsätta, vilka blockerare som ska undvikas och vilken del som bör prioriteras härnäst.
 
 ### Körning 1
 - Projektinventering

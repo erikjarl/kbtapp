@@ -561,6 +561,7 @@ function initMaterialBuilder() {
       const result = await serverDataRequest('/api/relationships/clients', { clientEmail: email }, 'POST');
       await loadAvailableClients();
       await loadDashboardSummary();
+      renderDashboardOverview();
       populatePatientSelect();
       if (input) input.value = '';
       if (result.requestPending) {
@@ -1925,24 +1926,28 @@ function initMaterialBuilder() {
     if (focusTitle) {
       focusTitle.textContent = summary?.pendingSubmissions
         ? `${summary.pendingSubmissions} inskick väntar på återkoppling`
-        : summary?.waitingReplyThreads
-          ? `${summary.waitingReplyThreads} patienttrådar väntar på svar`
-          : summary?.unreadThreads
-            ? `${summary.unreadThreads} patienttrådar har oläst aktivitet`
-          : summary?.linkedPatients
-            ? `${summary.linkedPatients} länkade patienter i lugnt läge`
-            : 'Börja med att länka din första patient';
+        : summary?.pendingRequestCount && !summary?.linkedPatients
+          ? `${summary.pendingRequestCount} kopplingsförfråg${summary.pendingRequestCount === 1 ? 'an' : 'ningar'} väntar på svar`
+          : summary?.waitingReplyThreads
+            ? `${summary.waitingReplyThreads} patienttrådar väntar på svar`
+            : summary?.unreadThreads
+              ? `${summary.unreadThreads} patienttrådar har oläst aktivitet`
+            : summary?.linkedPatients
+              ? `${summary.linkedPatients} länkade patienter i lugnt läge`
+              : 'Börja med att länka din första patient';
     }
     if (focusCopy) {
       focusCopy.textContent = summary?.pendingSubmissions
         ? 'Öppna inskicksvyn och ge kort återkoppling där det väntar, så fortsätter behandlingsflödet utan att tappa fart.'
-        : summary?.waitingReplyThreads
-          ? 'Det finns patienttrådar där senaste meddelandet kommer från patienten. Ett kort svar räcker ofta långt här.'
-          : summary?.unreadThreads
-            ? 'Det finns oläst aktivitet i patienttrådar även om vissa redan fått svar. Du kan snabbt öppna och orientera dig här.'
-          : summary?.linkedPatients
-            ? 'Relationerna finns på plats. Nästa naturliga steg är att tilldela nytt material eller följa upp senaste aktivitet.'
-            : 'När du länkat en registrerad patient börjar dashboarden visa verkliga relationer, händelser och senaste aktivitet.';
+        : summary?.pendingRequestCount && !summary?.linkedPatients
+          ? 'Du har skickat kopplingsförfrågningar som patienten inte har svarat på än. Loggar patienten in ser de förfrågan på sin dashboard.'
+          : summary?.waitingReplyThreads
+            ? 'Det finns patienttrådar där senaste meddelandet kommer från patienten. Ett kort svar räcker ofta långt här.'
+            : summary?.unreadThreads
+              ? 'Det finns oläst aktivitet i patienttrådar även om vissa redan fått svar. Du kan snabbt öppna och orientera dig här.'
+            : summary?.linkedPatients
+              ? 'Relationerna finns på plats. Nästa naturliga steg är att tilldela nytt material eller följa upp senaste aktivitet.'
+              : 'När du länkat en registrerad patient börjar dashboarden visa verkliga relationer, händelser och senaste aktivitet.';
     }
     if (focusTimeline) {
       const items = summary?.recentActivity?.length
@@ -1962,6 +1967,44 @@ function initMaterialBuilder() {
         ? items.map(item => `<div class="list-item"><span class="list-primary">${escapeHtml(item.title || 'Aktivitet')}</span><span class="list-secondary">${escapeHtml(item.detail || 'Detaljer saknas')}${item.timestamp ? ` · ${escapeHtml(item.timestamp)}` : ''}</span></div>`).join('')
         : '<div class="list-item"><span class="list-primary">Ingen auth-backad aktivitet ännu</span><span class="list-secondary">Länka patient, tilldela material och börja arbeta så fylls listan här.</span></div>';
     }
+  }
+
+  function renderTherapistPendingRequests() {
+    const card = document.getElementById('therapist-pending-requests-card');
+    const list = document.getElementById('therapist-pending-requests-list');
+    const status = document.getElementById('therapist-pending-requests-status');
+    if (!card || !list || !status) return;
+
+    if (state.currentUser?.role !== 'therapist') {
+      card.style.display = 'none';
+      return;
+    }
+
+    const requests = Array.isArray(state.pendingRelationshipRequests) ? state.pendingRelationshipRequests : [];
+    if (!requests.length) {
+      card.style.display = 'none';
+      return;
+    }
+
+    card.style.display = '';
+    status.innerHTML = `<span>${requests.length} v${requests.length === 1 ? 'äntar' : 'äntar'} p${requests.length === 1 ? 'å' : 'å'} godkännande</span>`;
+
+    list.innerHTML = '';
+    requests.forEach(request => {
+      const item = document.createElement('div');
+      item.className = 'spotlight-row';
+      const createdDate = request.createdAt ? new Date(request.createdAt).toLocaleDateString('sv-SE') : 'okänt datum';
+      item.innerHTML = `
+        <div class="pending-request-info">
+          <strong>${escapeHtml(request.clientName || 'Patient')}</strong>
+          <small>Skickades ${escapeHtml(createdDate)} · inväntar godkännande</small>
+        </div>
+        <div class="pending-request-actions">
+          <span class="status-pill status-påbörjad">Väntar</span>
+        </div>
+      `;
+      list.appendChild(item);
+    });
   }
 
   function renderClientRelationshipRequests() {
@@ -2028,6 +2071,7 @@ function initMaterialBuilder() {
 
   function renderDashboardOverview() {
     renderDashboardSummaryCards();
+    renderTherapistPendingRequests();
     renderClientRelationshipRequests();
     const list = document.getElementById('therapist-patient-overview-list');
     const summary = document.getElementById('therapist-patient-overview-summary');
