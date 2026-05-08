@@ -1071,3 +1071,50 @@
 ### Nästa steg
 - Nästa lilla rimliga steg i samma område är en enkel notifiering eller badge när patienten godkänner en tidigare skickad förfrågan
 - Alternativt kan samma pending-/relationsinfo återanvändas i en tydligare `Mina patienter`-översikt om fler relationsdetaljer behövs
+
+## 2026-05-08 — Enkel auth-backad notifiering när patient godkänner kopplingsförfrågan
+
+### Vad jag arbetade med
+- En tydligt avgränsad del: notifiering/badge för terapeuten när en patient godkänner en tidigare skickad kopplingsförfrågan
+- Målet var att hålla lösningen liten men verklig, med auth-backad persistens och enkel möjlighet att markera notifieringen som sedd
+
+### Vad jag ändrade
+- Utökade `server.js` så accepterade relationsposter nu kan bära `therapistSeenAcceptedAt`
+- Lät patientens godkännande via `POST /api/relationships/respond` skapa ett nytt oläst godkännandeläge för terapeuten när action är `accept`
+- Lade till ny auth-skyddad backend-endpoint:
+  - `POST /api/relationships/acknowledge-accepted`
+- Utökade dashboard-sammanfattningen i `GET /api/dashboard/therapist-summary` med:
+  - `newlyAcceptedRequestCount`
+  - `newlyAcceptedRelationships`
+- Lät `newEvents` även räkna in nya godkända kopplingar så toppräknaren faktiskt reagerar
+- Lade till ny dashboardsektion i `index.html` för `Nyss godkända kopplingar`
+- Lade till frontendrendering i `script.js` som visar godkända patienter med namn, e-post, datum och knapp `Markera som sedd`
+- Lade till frontendfunktion `acknowledgeAcceptedRelationship(...)` som sparar seen-state i backend och uppdaterar dashboarden direkt
+- Lade till liten badge-styling i `styles.css` för notifieringsräknaren
+
+### Vad som nu fungerar
+- När en patient godkänner en kopplingsförfrågan får terapeuten nu en enkel auth-backad notifiering i dashboarden
+- Notifieringen innehåller både räknare och en konkret lista över vilka patienter som nyss godkänt
+- Terapeuten kan markera en enskild notifiering som sedd, varpå den försvinner ur listan och räknaren uppdateras
+- Praktiskt verifierat via `curl` mot lokal Node-server på port `4381`:
+  - registrera terapeutkonto
+  - registrera patientkonto
+  - skicka kopplingsförfrågan som terapeut
+  - verifiera att dashboard summary före accept har `pendingRequestCount: 1` och `newlyAcceptedRequestCount: 0`
+  - godkänna som patient
+  - verifiera att dashboard summary efter accept har `newlyAcceptedRequestCount: 1` och att relationen finns i `newlyAcceptedRelationships`
+  - markera godkännandet som sett via `POST /api/relationships/acknowledge-accepted`
+  - verifiera att dashboard summary därefter återgår till `newlyAcceptedRequestCount: 0`
+- `node --check server.js && node --check script.js` passerar
+- Lokal serverstart verifierades med `PORT=4381 node server.js`
+
+### Vad som inte fungerar
+- Full praktisk browserverifiering kunde inte genomföras i denna miljö:
+  - OpenClaws browser-verktyg kunde inte ansluta till host-Chrome eftersom `DevToolsActivePort` saknades
+  - sandbox-browser var inte tillgänglig
+- Notifieringen visas just nu bara i terapeutens dashboard och inte ännu i sidomeny, toppbar eller andra vyer
+- `Markera som sedd` arbetar i denna version per notifieringsrad; ingen separat `markera alla som sedda` finns ännu
+
+### Nästa steg
+- Ett naturligt nästa lilla steg i samma område är att lägga till `markera alla som sedda` eller en diskret toppbarbadge som återanvänder samma auth-backade räknare
+- Alternativt kan samma godkännandedata användas för att lyfta fram nya patienter tydligare i `Mina patienter`-översikten direkt efter accept

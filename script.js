@@ -593,6 +593,22 @@ function initMaterialBuilder() {
     }
   }
 
+  async function acknowledgeAcceptedRelationship(relationshipId = '') {
+    try {
+      const result = await serverDataRequest('/api/relationships/acknowledge-accepted', { relationshipId }, 'POST');
+      await loadAvailableClients();
+      await loadDashboardSummary();
+      renderDashboardOverview();
+      populatePatientSelect();
+      const count = Number(result?.acknowledgedCount || 0);
+      if (count > 0) {
+        showToast('Godkännande markerat', count === 1 ? 'Kopplingen är nu noterad.' : `${count} nya kopplingar markerades som sedda.`);
+      }
+    } catch (error) {
+      showToast('Kunde inte markera som sedd', error.message || 'Försök igen.');
+    }
+  }
+
   function populatePatientSelect() {
     if (!els.patientSelect) return;
     const knownPatients = getKnownPatients();
@@ -1938,30 +1954,34 @@ function initMaterialBuilder() {
     }
 
     if (focusTitle) {
-      focusTitle.textContent = summary?.pendingSubmissions
-        ? `${summary.pendingSubmissions} inskick väntar på återkoppling`
-        : summary?.pendingRequestCount && !summary?.linkedPatients
-          ? `${summary.pendingRequestCount} kopplingsförfråg${summary.pendingRequestCount === 1 ? 'an' : 'ningar'} väntar på svar`
-          : summary?.waitingReplyThreads
-            ? `${summary.waitingReplyThreads} patienttrådar väntar på svar`
-            : summary?.unreadThreads
-              ? `${summary.unreadThreads} patienttrådar har oläst aktivitet`
-            : summary?.linkedPatients
-              ? `${summary.linkedPatients} länkade patienter i lugnt läge`
-              : 'Börja med att länka din första patient';
+      focusTitle.textContent = summary?.newlyAcceptedRequestCount
+        ? `${summary.newlyAcceptedRequestCount} patient${summary.newlyAcceptedRequestCount === 1 ? '' : 'er'} har godkänt din förfrågan`
+        : summary?.pendingSubmissions
+          ? `${summary.pendingSubmissions} inskick väntar på återkoppling`
+          : summary?.pendingRequestCount && !summary?.linkedPatients
+            ? `${summary.pendingRequestCount} kopplingsförfråg${summary.pendingRequestCount === 1 ? 'an' : 'ningar'} väntar på svar`
+            : summary?.waitingReplyThreads
+              ? `${summary.waitingReplyThreads} patienttrådar väntar på svar`
+              : summary?.unreadThreads
+                ? `${summary.unreadThreads} patienttrådar har oläst aktivitet`
+              : summary?.linkedPatients
+                ? `${summary.linkedPatients} länkade patienter i lugnt läge`
+                : 'Börja med att länka din första patient';
     }
     if (focusCopy) {
-      focusCopy.textContent = summary?.pendingSubmissions
-        ? 'Öppna inskicksvyn och ge kort återkoppling där det väntar, så fortsätter behandlingsflödet utan att tappa fart.'
-        : summary?.pendingRequestCount && !summary?.linkedPatients
-          ? 'Du har skickat kopplingsförfrågningar som patienten inte har svarat på än. Loggar patienten in ser de förfrågan på sin dashboard.'
-          : summary?.waitingReplyThreads
-            ? 'Det finns patienttrådar där senaste meddelandet kommer från patienten. Ett kort svar räcker ofta långt här.'
-            : summary?.unreadThreads
-              ? 'Det finns oläst aktivitet i patienttrådar även om vissa redan fått svar. Du kan snabbt öppna och orientera dig här.'
-            : summary?.linkedPatients
-              ? 'Relationerna finns på plats. Nästa naturliga steg är att tilldela nytt material eller följa upp senaste aktivitet.'
-              : 'När du länkat en registrerad patient börjar dashboarden visa verkliga relationer, händelser och senaste aktivitet.';
+      focusCopy.textContent = summary?.newlyAcceptedRequestCount
+        ? 'Du har nya godkända kopplingar. De är nu aktiva och kan direkt användas för att tilldela material eller starta behandlingskontakt.'
+        : summary?.pendingSubmissions
+          ? 'Öppna inskicksvyn och ge kort återkoppling där det väntar, så fortsätter behandlingsflödet utan att tappa fart.'
+          : summary?.pendingRequestCount && !summary?.linkedPatients
+            ? 'Du har skickat kopplingsförfrågningar som patienten inte har svarat på än. Loggar patienten in ser de förfrågan på sin dashboard.'
+            : summary?.waitingReplyThreads
+              ? 'Det finns patienttrådar där senaste meddelandet kommer från patienten. Ett kort svar räcker ofta långt här.'
+              : summary?.unreadThreads
+                ? 'Det finns oläst aktivitet i patienttrådar även om vissa redan fått svar. Du kan snabbt öppna och orientera dig här.'
+              : summary?.linkedPatients
+                ? 'Relationerna finns på plats. Nästa naturliga steg är att tilldela nytt material eller följa upp senaste aktivitet.'
+                : 'När du länkat en registrerad patient börjar dashboarden visa verkliga relationer, händelser och senaste aktivitet.';
     }
     if (focusTimeline) {
       const items = summary?.recentActivity?.length
@@ -2024,6 +2044,56 @@ function initMaterialBuilder() {
         recallButton.disabled = true;
         recallButton.textContent = 'Återkallar…';
         await recallRelationshipRequest(request.id);
+      });
+      list.appendChild(item);
+    });
+  }
+
+  function renderTherapistAcceptedRequests() {
+    const card = document.getElementById('therapist-accepted-requests-card');
+    const list = document.getElementById('therapist-accepted-requests-list');
+    const status = document.getElementById('therapist-accepted-requests-status');
+    if (!card || !list || !status) return;
+
+    if (state.currentUser?.role !== 'therapist') {
+      card.style.display = 'none';
+      return;
+    }
+
+    const acceptedRequests = Array.isArray(state.serverDashboardSummary?.newlyAcceptedRelationships)
+      ? state.serverDashboardSummary.newlyAcceptedRelationships
+      : [];
+    const acceptedCount = Number(state.serverDashboardSummary?.newlyAcceptedRequestCount || 0);
+
+    if (!acceptedRequests.length || !acceptedCount) {
+      card.style.display = 'none';
+      return;
+    }
+
+    card.style.display = '';
+    status.innerHTML = `<span>${acceptedCount} nya godkännanden</span><span class="new-approval-badge">${acceptedCount}</span>`;
+    list.innerHTML = '';
+
+    acceptedRequests.forEach(request => {
+      const item = document.createElement('div');
+      item.className = 'spotlight-row';
+      const respondedDate = request.respondedAt ? new Date(request.respondedAt).toLocaleDateString('sv-SE') : 'nyligen';
+      item.innerHTML = `
+        <div class="pending-request-info">
+          <strong>${escapeHtml(request.clientName || 'Patient')}</strong>
+          <small>${escapeHtml(request.clientEmail || 'Ingen e-post tillgänglig')}</small>
+          <small>Godkände ${escapeHtml(respondedDate)} · kopplingen är nu aktiv</small>
+        </div>
+        <div class="pending-request-actions">
+          <span class="status-pill status-granskad">Godkänd</span>
+          <button class="builder-action ghost" type="button">Markera som sedd</button>
+        </div>
+      `;
+      const acknowledgeButton = item.querySelector('button');
+      acknowledgeButton?.addEventListener('click', async () => {
+        acknowledgeButton.disabled = true;
+        acknowledgeButton.textContent = 'Markerar…';
+        await acknowledgeAcceptedRelationship(request.id);
       });
       list.appendChild(item);
     });
@@ -2094,6 +2164,7 @@ function initMaterialBuilder() {
   function renderDashboardOverview() {
     renderDashboardSummaryCards();
     renderTherapistPendingRequests();
+    renderTherapistAcceptedRequests();
     renderClientRelationshipRequests();
     const list = document.getElementById('therapist-patient-overview-list');
     const summary = document.getElementById('therapist-patient-overview-summary');

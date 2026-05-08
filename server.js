@@ -166,7 +166,8 @@ function publicRelationship(relationship, db = null) {
     clientEmail,
     status: relationship.status || 'accepted',
     createdAt: relationship.createdAt,
-    respondedAt: relationship.respondedAt || ''
+    respondedAt: relationship.respondedAt || '',
+    therapistSeenAcceptedAt: relationship.therapistSeenAcceptedAt || ''
   };
 }
 
@@ -439,10 +440,47 @@ async function handleApi(req, res, pathname) {
     relationship.status = action === 'accept' ? 'accepted' : 'declined';
     relationship.respondedAt = new Date().toISOString();
     relationship.clientName = sessionData.user.name;
+    relationship.therapistSeenAcceptedAt = action === 'accept' ? '' : (relationship.therapistSeenAcceptedAt || '');
     const therapist = sessionData.db.users.find(user => user.id === relationship.therapistUserId);
     if (therapist) relationship.therapistName = therapist.name;
     writeDb(sessionData.db);
     return sendJson(res, 200, { relationship: publicRelationship(relationship) });
+  }
+
+  if (pathname === '/api/relationships/acknowledge-accepted') {
+    const sessionData = getSessionUser(req);
+    if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
+    if (sessionData.user.role !== 'therapist') {
+      return sendJson(res, 403, { error: 'Endast terapeuter kan markera godkännanden som sedda.' });
+    }
+    if (req.method !== 'POST') {
+      return sendJson(res, 405, { error: 'Method not allowed' });
+    }
+
+    const body = await parseBody(req);
+    const relationshipId = String(body.relationshipId || '').trim();
+    const acknowledgedAt = new Date().toISOString();
+    const acceptedRelationships = (sessionData.db.relationships || []).filter(item => (
+      item?.therapistUserId === sessionData.user.id
+      && (item?.status || 'accepted') === 'accepted'
+      && item?.respondedAt
+      && !item?.therapistSeenAcceptedAt
+      && (!relationshipId || item.id === relationshipId)
+    ));
+
+    if (relationshipId && !acceptedRelationships.length) {
+      return sendJson(res, 404, { error: 'Ingen ny godkänd koppling hittades.' });
+    }
+
+    acceptedRelationships.forEach(item => {
+      item.therapistSeenAcceptedAt = acknowledgedAt;
+    });
+    writeDb(sessionData.db);
+    return sendJson(res, 200, {
+      ok: true,
+      acknowledgedCount: acceptedRelationships.length,
+      relationships: acceptedRelationships.map(item => publicRelationship(item, sessionData.db))
+    });
   }
 
   if (pathname === '/api/data/assigned') {
@@ -582,6 +620,14 @@ async function handleApi(req, res, pathname) {
     const pendingRequestCount = (sessionData.db.relationships || [])
       .filter(item => item?.therapistUserId === sessionData.user.id && (item?.status || 'accepted') === 'pending')
       .length;
+    const newlyAcceptedRelationships = (sessionData.db.relationships || [])
+      .filter(item => (
+        item?.therapistUserId === sessionData.user.id
+        && (item?.status || 'accepted') === 'accepted'
+        && item?.respondedAt
+        && !item?.therapistSeenAcceptedAt
+      ))
+      .sort((a, b) => getTimestamp(b?.respondedAt) - getTimestamp(a?.respondedAt));
 
     return sendJson(res, 200, {
       summary: {
@@ -590,9 +636,11 @@ async function handleApi(req, res, pathname) {
         pendingSubmissions: pendingSubmissions.length,
         unreadThreads: unreadMessageThreads.length,
         waitingReplyThreads: waitingReplyThreads.length,
-        newEvents: pendingSubmissions.length + unreadMessageThreads.length + recentAssignments.length,
+        newEvents: pendingSubmissions.length + unreadMessageThreads.length + recentAssignments.length + newlyAcceptedRelationships.length,
         assignedCount: assignedItems.length,
         pendingRequestCount: pendingRequestCount,
+        newlyAcceptedRequestCount: newlyAcceptedRelationships.length,
+        newlyAcceptedRelationships: newlyAcceptedRelationships.slice(0, 3).map(item => publicRelationship(item, sessionData.db)),
         recentActivity: recentActivity.slice(0, 3)
       }
     });
