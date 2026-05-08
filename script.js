@@ -579,6 +579,20 @@ function initMaterialBuilder() {
     }
   }
 
+  async function recallRelationshipRequest(relationshipId) {
+    if (!relationshipId) return;
+    try {
+      await serverDataRequest('/api/relationships/requests', { relationshipId }, 'DELETE');
+      await loadAvailableClients();
+      await loadDashboardSummary();
+      renderDashboardOverview();
+      populatePatientSelect();
+      showToast('Förfrågan återkallad', 'Patienten ser inte längre den väntande kopplingen.');
+    } catch (error) {
+      showToast('Kunde inte återkalla', error.message || 'Försök igen.');
+    }
+  }
+
   function populatePatientSelect() {
     if (!els.patientSelect) return;
     const knownPatients = getKnownPatients();
@@ -1987,7 +2001,7 @@ function initMaterialBuilder() {
     }
 
     card.style.display = '';
-    status.innerHTML = `<span>${requests.length} v${requests.length === 1 ? 'äntar' : 'äntar'} p${requests.length === 1 ? 'å' : 'å'} godkännande</span>`;
+    status.innerHTML = `<span>${requests.length} väntar på godkännande</span>`;
 
     list.innerHTML = '';
     requests.forEach(request => {
@@ -2001,8 +2015,15 @@ function initMaterialBuilder() {
         </div>
         <div class="pending-request-actions">
           <span class="status-pill status-påbörjad">Väntar</span>
+          <button class="builder-action danger ghost" type="button">Återkalla</button>
         </div>
       `;
+      const recallButton = item.querySelector('button');
+      recallButton?.addEventListener('click', async () => {
+        recallButton.disabled = true;
+        recallButton.textContent = 'Återkallar…';
+        await recallRelationshipRequest(request.id);
+      });
       list.appendChild(item);
     });
   }

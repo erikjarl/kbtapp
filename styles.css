@@ -177,7 +177,7 @@ h3{font-size:1rem;font-weight:600;margin:0 0 12px}
 .pending-request-info{display:flex;flex-direction:column;gap:3px}
 .pending-request-info strong{font-size:.92rem}
 .pending-request-info small{color:#6b645e}
-.pending-request-actions{display:flex;align-items:center}
+.pending-request-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .pending-request-note{font-size:.85rem;color:#6b645e;line-height:1.5}
 .pending-request-note p{margin:0}
 .spotlight-row-empty{display:grid;justify-content:stretch}

@@ -361,18 +361,48 @@ async function handleApi(req, res, pathname) {
   if (pathname === '/api/relationships/requests') {
     const sessionData = getSessionUser(req);
     if (!sessionData) return sendJson(res, 401, { error: 'Logga in först.' });
-    if (req.method !== 'GET') {
-      return sendJson(res, 405, { error: 'Method not allowed' });
+
+    if (req.method === 'GET') {
+      const requests = (sessionData.db.relationships || []).filter(item => {
+        if ((item?.status || 'accepted') !== 'pending') return false;
+        if (sessionData.user.role === 'therapist') return item.therapistUserId === sessionData.user.id;
+        if (sessionData.user.role === 'client') return item.clientUserId === sessionData.user.id;
+        return false;
+      }).map(publicRelationship);
+
+      return sendJson(res, 200, { requests });
     }
 
-    const requests = (sessionData.db.relationships || []).filter(item => {
-      if ((item?.status || 'accepted') !== 'pending') return false;
-      if (sessionData.user.role === 'therapist') return item.therapistUserId === sessionData.user.id;
-      if (sessionData.user.role === 'client') return item.clientUserId === sessionData.user.id;
-      return false;
-    }).map(publicRelationship);
+    if (req.method === 'DELETE') {
+      if (sessionData.user.role !== 'therapist') {
+        return sendJson(res, 403, { error: 'Endast terapeuter kan återkalla kopplingsförfrågningar.' });
+      }
 
-    return sendJson(res, 200, { requests });
+      const body = await parseBody(req);
+      const relationshipId = String(body.relationshipId || '').trim();
+      if (!relationshipId) {
+        return sendJson(res, 400, { error: 'relationshipId krävs.' });
+      }
+
+      const relationshipIndex = (sessionData.db.relationships || []).findIndex(item => (
+        item?.id === relationshipId
+        && item?.therapistUserId === sessionData.user.id
+      ));
+      if (relationshipIndex === -1) {
+        return sendJson(res, 404, { error: 'Kopplingsförfrågan hittades inte.' });
+      }
+
+      const relationship = sessionData.db.relationships[relationshipIndex];
+      if ((relationship?.status || 'accepted') !== 'pending') {
+        return sendJson(res, 409, { error: 'Bara väntande förfrågningar kan återkallas.' });
+      }
+
+      const [removedRelationship] = sessionData.db.relationships.splice(relationshipIndex, 1);
+      writeDb(sessionData.db);
+      return sendJson(res, 200, { ok: true, removedRelationship: publicRelationship(removedRelationship) });
+    }
+
+    return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
   if (pathname === '/api/relationships/respond') {

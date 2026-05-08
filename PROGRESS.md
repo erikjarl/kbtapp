@@ -946,6 +946,45 @@
 - Därför är den här iterationen främst verifierad via kodgranskning, syntaxkontroll och riktat testskript som förberedelse, inte via fullt passerande browser-E2E i just denna miljö
 - Det finns fortfarande ingen realtidsuppdatering mellan två öppna sessioner; omladdning eller ny fetch krävs fortfarande för att extern aktivitet ska slå igenom direkt
 
+## 2026-05-08 — Terapeuten kan nu återkalla skickade kopplingsförfrågningar
+
+### Vad jag arbetade med
+- En tydligt avgränsad del: att låta terapeuten återkalla en redan skickad men ännu ej godkänd kopplingsförfrågan
+- Målet var att göra pending-listan på dashboarden praktiskt användbar utan att bygga om relationsflödet
+
+### Vad jag ändrade
+- Utökade `server.js` med stöd för `DELETE /api/relationships/requests`
+- Gjorde delete-endpointen auth-skyddad och begränsad till terapeuten som skickade förfrågan
+- Lät backend bara tillåta återkallning av relationer med status `pending`
+- Tog bort förfrågan helt ur databasen vid återkallning så den inte längre syns för vare sig terapeut eller patient
+- Lade till frontendfunktion `recallRelationshipRequest(...)` i `script.js`
+- Lade till knapp `Återkalla` i terapeutens pending-lista på dashboarden
+- Lade till enkel busy-text på knappen (`Återkallar…`) och toast vid lyckad/misslyckad återkallning
+- Justerade CSS för pending-request-actions i `styles.css` så statuspill och knapp får plats snyggt tillsammans
+
+### Vad som nu fungerar
+- Terapeuten kan återkalla en väntande kopplingsförfrågan direkt från dashboardens pending-lista
+- När förfrågan återkallas försvinner den från terapeutens egen pending-lista efter omladdning/refresh
+- Samma förfrågan försvinner också från patientens väntande godkännandekort eftersom relationsposten tas bort i backend
+- Praktiskt verifierat via curl mot lokal Node-server på port `4173`:
+  - registrera terapeutkonto
+  - registrera patientkonto
+  - skicka kopplingsförfrågan som terapeut
+  - verifiera att både terapeut och patient ser 1 pending request
+  - återkalla förfrågan via `DELETE /api/relationships/requests`
+  - verifiera att både terapeutens och patientens `GET /api/relationships/requests` därefter returnerar tom lista
+- `node --check server.js && node --check script.js` passerar
+- Lokal serverstart verifierad med `node server.js`
+
+### Vad som inte fungerar
+- Full praktisk browserverifiering kunde inte genomföras i denna miljö eftersom OpenClaws browser-verktyg fortfarande inte kunde ansluta till host-Chrome och sandbox-browser saknas
+- Återkallning finns just nu bara i terapeutens dashboardkort för pending requests, inte i andra eventuella vyer
+- Det finns ingen extra bekräftelsedialog före återkallning ännu; knappen gör direktåtgärd för att hålla lösningen enkel
+
+### Nästa steg
+- Nästa lilla rimliga steg i samma område är att visa patientens e-postadress i terapeutens pending-lista så terapeuten lättare kan skilja liknande namn åt
+- Alternativt lägga till en enkel notifiering/badge när en patient godkänner en tidigare skickad förfrågan
+
 ## 2026-05-08 — Terapeuten ser nu skickade kopplingsförfrågningar
 
 ### Vad jag arbetade med
