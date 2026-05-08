@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   const AUTH_STORAGE_KEY = 'kbtapp_auth_token';
+  const IS_STATIC_PUBLIC_HOST = window.location.hostname === 'erikjarl.github.io';
   const today = new Date().toLocaleDateString('sv-SE', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
@@ -30,6 +31,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!authFeedback) return;
     authFeedback.textContent = message;
     authFeedback.dataset.tone = tone;
+  }
+
+  function enableStaticPublicMode() {
+    syncRoleButtons();
+    setAuthFeedback('Publik demoläge: den fulla inloggningen kräver backend/servermiljö och är tillfälligt avstängd här för att sidan ska förbli stabil.', 'neutral');
+
+    [loginForm, registerForm].forEach(form => {
+      if (!form) return;
+      form.querySelectorAll('input, button').forEach(element => {
+        element.disabled = true;
+      });
+    });
+
+    document.querySelectorAll('.logout').forEach(item => {
+      item.style.pointerEvents = 'none';
+      item.style.opacity = '0.55';
+    });
   }
 
   async function apiRequest(url, payload = {}, options = {}) {
@@ -105,81 +123,87 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  document.querySelectorAll('.logout').forEach(item => {
-    item.addEventListener('click', async e => {
-      e.preventDefault();
-      try {
-        await apiRequest('/api/auth/logout', {}, { method: 'POST' });
-      } catch (error) {
-        // ignored on logout
-      }
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      authState.user = null;
-      closeVisibleOverlays();
-      therapistView.classList.remove('active');
-      clientView.classList.remove('active');
-      loginView.classList.add('active');
-      setAuthFeedback('Du är utloggad.', 'success');
-      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: false, user: null } }));
+  if (!IS_STATIC_PUBLIC_HOST) {
+    document.querySelectorAll('.logout').forEach(item => {
+      item.addEventListener('click', async e => {
+        e.preventDefault();
+        try {
+          await apiRequest('/api/auth/logout', {}, { method: 'POST' });
+        } catch (error) {
+          // ignored on logout
+        }
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        authState.user = null;
+        closeVisibleOverlays();
+        therapistView.classList.remove('active');
+        clientView.classList.remove('active');
+        loginView.classList.add('active');
+        setAuthFeedback('Du är utloggad.', 'success');
+        document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: false, user: null } }));
+      });
     });
-  });
+  }
 
-  loginForm?.addEventListener('submit', async event => {
-    event.preventDefault();
-    const formData = new FormData(loginForm);
-    setAuthFeedback('Loggar in…', 'neutral');
-    setAuthFormBusy(loginForm, true, 'Loggar in…');
-    try {
-      const result = await apiRequest('/api/auth/login', {
-        email: formData.get('email'),
-        password: formData.get('password'),
-        role: authState.role
-      });
-      localStorage.setItem(AUTH_STORAGE_KEY, result.token);
-      applyUserToUi(result.user);
-      loginForm.reset();
-      setAuthFeedback(`Inloggad som ${result.user.name}.`, 'success');
-      openRole(result.user.role);
-      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role, user: result.user } }));
-    } catch (error) {
-      setAuthFeedback(error.message, 'error');
-    } finally {
-      setAuthFormBusy(loginForm, false);
-    }
-  });
+  if (!IS_STATIC_PUBLIC_HOST) {
+    loginForm?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const formData = new FormData(loginForm);
+      setAuthFeedback('Loggar in…', 'neutral');
+      setAuthFormBusy(loginForm, true, 'Loggar in…');
+      try {
+        const result = await apiRequest('/api/auth/login', {
+          email: formData.get('email'),
+          password: formData.get('password'),
+          role: authState.role
+        });
+        localStorage.setItem(AUTH_STORAGE_KEY, result.token);
+        applyUserToUi(result.user);
+        loginForm.reset();
+        setAuthFeedback(`Inloggad som ${result.user.name}.`, 'success');
+        openRole(result.user.role);
+        document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role, user: result.user } }));
+      } catch (error) {
+        setAuthFeedback(error.message, 'error');
+      } finally {
+        setAuthFormBusy(loginForm, false);
+      }
+    });
+  }
 
-  registerForm?.addEventListener('submit', async event => {
-    event.preventDefault();
-    const formData = new FormData(registerForm);
-    const password = String(formData.get('password') || '');
-    const passwordConfirm = String(formData.get('passwordConfirm') || '');
+  if (!IS_STATIC_PUBLIC_HOST) {
+    registerForm?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const formData = new FormData(registerForm);
+      const password = String(formData.get('password') || '');
+      const passwordConfirm = String(formData.get('passwordConfirm') || '');
 
-    if (password !== passwordConfirm) {
-      setAuthFeedback('Lösenorden matchar inte. Kontrollera och försök igen.', 'error');
-      return;
-    }
+      if (password !== passwordConfirm) {
+        setAuthFeedback('Lösenorden matchar inte. Kontrollera och försök igen.', 'error');
+        return;
+      }
 
-    setAuthFeedback('Skapar konto…', 'neutral');
-    setAuthFormBusy(registerForm, true, 'Skapar konto…');
-    try {
-      const result = await apiRequest('/api/auth/register', {
-        name: formData.get('name'),
-        email: formData.get('email'),
-        password,
-        role: authState.role
-      });
-      localStorage.setItem(AUTH_STORAGE_KEY, result.token);
-      applyUserToUi(result.user);
-      registerForm.reset();
-      setAuthFeedback(`Konto skapat för ${result.user.name}.`, 'success');
-      openRole(result.user.role);
-      document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role, user: result.user } }));
-    } catch (error) {
-      setAuthFeedback(error.message, 'error');
-    } finally {
-      setAuthFormBusy(registerForm, false);
-    }
-  });
+      setAuthFeedback('Skapar konto…', 'neutral');
+      setAuthFormBusy(registerForm, true, 'Skapar konto…');
+      try {
+        const result = await apiRequest('/api/auth/register', {
+          name: formData.get('name'),
+          email: formData.get('email'),
+          password,
+          role: authState.role
+        });
+        localStorage.setItem(AUTH_STORAGE_KEY, result.token);
+        applyUserToUi(result.user);
+        registerForm.reset();
+        setAuthFeedback(`Konto skapat för ${result.user.name}.`, 'success');
+        openRole(result.user.role);
+        document.dispatchEvent(new CustomEvent('kbtapp:auth-changed', { detail: { loggedIn: true, role: result.user.role, user: result.user } }));
+      } catch (error) {
+        setAuthFeedback(error.message, 'error');
+      } finally {
+        setAuthFormBusy(registerForm, false);
+      }
+    });
+  }
 
   async function restoreSession() {
     const token = getAuthToken();
@@ -259,6 +283,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   });
+
+  if (IS_STATIC_PUBLIC_HOST) {
+    enableStaticPublicMode();
+    return;
+  }
 
   initMaterialBuilder();
   restoreSession();
@@ -2053,10 +2082,12 @@ function initMaterialBuilder() {
     const card = document.getElementById('therapist-accepted-requests-card');
     const list = document.getElementById('therapist-accepted-requests-list');
     const status = document.getElementById('therapist-accepted-requests-status');
-    if (!card || !list || !status) return;
+    const acknowledgeAllButton = document.getElementById('therapist-accepted-requests-ack-all');
+    if (!card || !list || !status || !acknowledgeAllButton) return;
 
     if (state.currentUser?.role !== 'therapist') {
       card.style.display = 'none';
+      acknowledgeAllButton.onclick = null;
       return;
     }
 
@@ -2067,11 +2098,21 @@ function initMaterialBuilder() {
 
     if (!acceptedRequests.length || !acceptedCount) {
       card.style.display = 'none';
+      acknowledgeAllButton.onclick = null;
+      acknowledgeAllButton.disabled = false;
+      acknowledgeAllButton.textContent = 'Markera alla som sedda';
       return;
     }
 
     card.style.display = '';
     status.innerHTML = `<span>${acceptedCount} nya godkännanden</span><span class="new-approval-badge">${acceptedCount}</span>`;
+    acknowledgeAllButton.disabled = acceptedCount < 2;
+    acknowledgeAllButton.textContent = acceptedCount > 1 ? `Markera alla (${acceptedCount}) som sedda` : 'Markera som sedd';
+    acknowledgeAllButton.onclick = async () => {
+      acknowledgeAllButton.disabled = true;
+      acknowledgeAllButton.textContent = 'Markerar…';
+      await acknowledgeAcceptedRelationship();
+    };
     list.innerHTML = '';
 
     acceptedRequests.forEach(request => {
