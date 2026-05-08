@@ -5,11 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>KBTApp</title>
   <meta name="description" content="KBTApp – digital plattform för KBT-terapeuter och patienter."/>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css"/>
-  <link rel="preload" as="image" href="https://images.unsplash.com/photo-1580481054752-058e55c25374?q=80&w=2070&auto=format&fit=crop" />
 </head>
 <body>
   <section id="login-view" class="view active">
@@ -41,9 +37,9 @@
           <h2>Pastell, lugn rytm och tydliga nästa steg.</h2>
           <p>KBTApp ska kännas varm, modern och enkel att förstå både för terapeut och patient. Därför får startsidan nu större färgfält, mjukare former och mer positivt bildspråk.</p>
         </div>
-        <div class="feature-visual">
+        <div class="feature-visual" aria-hidden="true">
           <div class="feature-blob"></div>
-          <img src="https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=1200&auto=format&fit=crop" alt="Positivt samtal i lugn miljö" loading="lazy" />
+          <div class="illustration-panel illustration-panel-tall"></div>
         </div>
       </div>
       <div class="auth-shell">
@@ -102,7 +98,7 @@
       </div>
       <div class="login-footnote">
         <p class="login-note">Konton och lösenord sparas nu lokalt i en enkel backend. Övrig appdata är fortfarande en första version.</p>
-        <p class="login-updated">Uppdaterades: 2026-05-08 04:48 CEST</p>
+        <p class="login-updated">Uppdaterades: 2026-05-08 20:53 CEST</p>
       </div>
     </div>
   </section>
@@ -159,7 +155,7 @@
               <div><strong>Steg 2</strong><span>Tilldela ett material eller en hemuppgift</span></div>
               <div><strong>Steg 3</strong><span>Följ upp svar och meddelanden här</span></div>
             </div>
-            <img class="hero-inline-image" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1200&auto=format&fit=crop" alt="Positiv terapeutisk närvaro" loading="lazy" />
+            <div class="hero-inline-image illustration-panel" aria-hidden="true"></div>
           </div>
         </div>
         <div class="dashboard-grid">
@@ -207,9 +203,14 @@
             </div>
           </div>
           <div class="card pending-patient-requests-card accepted-relationship-notices-card" id="therapist-accepted-requests-card" style="display:none">
-            <span class="section-kicker">Nyss godkända kopplingar</span>
-            <h3>Patienter har godkänt dina förfrågningar</h3>
-            <p class="patient-overview-lead">De här relationerna är nu aktiva och kan användas för tilldelningar, meddelanden och uppföljning.</p>
+            <div class="accepted-relationship-header">
+              <div>
+                <span class="section-kicker">Nyss godkända kopplingar</span>
+                <h3>Patienter har godkänt dina förfrågningar</h3>
+                <p class="patient-overview-lead">De här relationerna är nu aktiva och kan användas för tilldelningar, meddelanden och uppföljning.</p>
+              </div>
+              <button class="builder-action ghost accepted-relationship-bulk-action" id="therapist-accepted-requests-ack-all" type="button">Markera alla som sedda</button>
+            </div>
             <div class="pending-requests-status" id="therapist-accepted-requests-status">
               <span>0 nya godkännanden</span>
             </div>
@@ -234,7 +235,7 @@
           <h3>Backendförberedelse</h3>
           <p>Den här vyn är upplagd för att senare kunna bindas till användarroller, patientlistor, meddelandetrådar, uppgiftsmallar och versionshanterat patientmaterial.</p>
         </div>
-        <div class="therapist-image-area"><img src="https://images.unsplash.com/photo-1516302752625-fcc3c50ae61f?q=80&w=1800&auto=format&fit=crop" alt="Lugn terapeutisk miljö" loading="lazy" /></div>
+        <div class="therapist-image-area illustration-panel illustration-panel-wide" aria-hidden="true"></div>
       </section>
 
       <section data-page="messages" class="page themed-page themed-coral">
@@ -428,7 +429,7 @@
       </section>
 
       <section data-page="library" class="page themed-page themed-butter">
-        <div class="page-header library-page-head"><div><span class="section-kicker">Återanvänd</span><h1>Mitt materialbibliotek</h1><p class="sub">Eget bibliotek för sparade hemuppgifter och psykoedukation, redo för filter och versionshantering.</p></div><div class="library-summary card soft-panel"><strong>7 sparade objekt</strong><small>Material med tydlig typ, status och senaste uppdatering.</small><img class="library-summary-image" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=900&auto=format&fit=crop" alt="Lugn patientnära miljö" loading="lazy" /></div></div>
+        <div class="page-header library-page-head"><div><span class="section-kicker">Återanvänd</span><h1>Mitt materialbibliotek</h1><p class="sub">Eget bibliotek för sparade hemuppgifter och psykoedukation, redo för filter och versionshantering.</p></div><div class="library-summary card soft-panel"><strong>7 sparade objekt</strong><small>Material med tydlig typ, status och senaste uppdatering.</small><div class="library-summary-image illustration-panel" aria-hidden="true"></div></div></div>
         <div class="library-grid" id="library-grid">
           <div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Hemuppgift</span><h3>Sömnregistrering</h3></div></div><p>Veckovis registrering med kvällsrutin, uppvaknanden och kort reflektion.</p><div class="library-card-meta"><span>7–10 min</span><span>Aktiv mall</span></div></div>
           <div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Hemuppgift</span><h3>Beteendeaktivering – vecka 1</h3></div></div><p>Tre små aktiviteter, energiskattning och uppföljningsfråga till nästa session.</p><div class="library-card-meta"><span>10–15 min</span><span>Sparad version</span></div></div>
@@ -437,7 +438,7 @@
       </section>
 
       <section data-page="templates" class="page themed-page themed-coral">
-        <div class="page-header library-page-head"><div><span class="section-kicker">Starta snabbare</span><h1>Mallbibliotek</h1><p class="sub">Förvalda mallar som senare ska kunna importeras till arbetsytan och modifieras per patient.</p></div><div class="library-summary card soft-panel"><strong>3 rekommenderade mallar</strong><small>Tänkta som tydliga utgångspunkter, inte låsta formulär.</small><img class="library-summary-image" src="https://images.unsplash.com/photo-1511988617509-a57c8a288659?q=80&w=900&auto=format&fit=crop" alt="Positiv miljö för samtal och utveckling" loading="lazy" /></div></div>
+        <div class="page-header library-page-head"><div><span class="section-kicker">Starta snabbare</span><h1>Mallbibliotek</h1><p class="sub">Förvalda mallar som senare ska kunna importeras till arbetsytan och modifieras per patient.</p></div><div class="library-summary card soft-panel"><strong>3 rekommenderade mallar</strong><small>Tänkta som tydliga utgångspunkter, inte låsta formulär.</small><div class="library-summary-image illustration-panel illustration-panel-alt" aria-hidden="true"></div></div></div>
         <div class="library-grid" id="template-grid">
           <div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Mall</span><h3>Tankefälla – registrering</h3></div></div><p>Identifiera situation, automatisk tanke, alternativ tanke och nästa lilla test.</p><div class="library-card-meta"><span>4 block</span><span>Redo att importera</span></div></div>
           <div class="card library-card"><div class="library-card-head"><div><span class="library-card-type">Mall</span><h3>Exponering – planeringsblad</h3></div></div><p>Trappa med förväntad SUDS, lärdom efteråt och plats för terapeutisk återkoppling.</p><div class="library-card-meta"><span>6 block</span><span>Vanlig i KBT</span></div></div>
@@ -506,7 +507,7 @@
               <div><strong>Torsdag</strong><span>Session 14.00</span></div>
               <div><strong>Efteråt</strong><span>Skicka in reflektion</span></div>
             </div>
-            <img class="hero-inline-image" src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=1200&auto=format&fit=crop" alt="Positiv och trygg vardag" loading="lazy" />
+            <div class="hero-inline-image illustration-panel illustration-panel-alt" aria-hidden="true"></div>
           </div>
         </div>
       <div class="dashboard-grid">
