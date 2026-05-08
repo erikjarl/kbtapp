@@ -1954,12 +1954,41 @@ function initMaterialBuilder() {
     if (element) element.textContent = String(value ?? 0);
   }
 
+  function renderTherapistDashboardNavBadge() {
+    const acceptedCount = Number(state.serverDashboardSummary?.newlyAcceptedRequestCount || 0);
+    const targets = [
+      document.querySelector('#therapist-nav .nav-item[data-page="dashboard"]'),
+      document.querySelector('#therapist-bottom-nav .bottom-item[data-page="dashboard"]')
+    ].filter(Boolean);
+
+    targets.forEach(target => {
+      let badge = target.querySelector('.nav-notification-badge');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'nav-notification-badge';
+        target.appendChild(badge);
+      }
+
+      if (state.currentUser?.role !== 'therapist' || acceptedCount <= 0) {
+        badge.hidden = true;
+        badge.textContent = '';
+        target.classList.remove('has-notification');
+        return;
+      }
+
+      badge.hidden = false;
+      badge.textContent = acceptedCount > 9 ? '9+' : String(acceptedCount);
+      target.classList.add('has-notification');
+    });
+  }
+
   function renderDashboardSummaryCards() {
     const summary = state.serverDashboardSummary;
     setDashboardStat('dashboard-stat-events', summary?.newEvents ?? 0);
     setDashboardStat('dashboard-stat-unread', summary?.waitingReplyThreads ?? summary?.unreadThreads ?? 0);
     setDashboardStat('dashboard-stat-patients', summary?.activePatients ?? 0);
     setDashboardStat('dashboard-stat-assigned', summary?.assignedCount ?? 0);
+    renderTherapistDashboardNavBadge();
 
     const focusTitle = document.getElementById('therapist-focus-title');
     const focusCopy = document.getElementById('therapist-focus-copy');

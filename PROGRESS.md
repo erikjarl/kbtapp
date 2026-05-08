@@ -1118,3 +1118,43 @@
 ### Nästa steg
 - Ett naturligt nästa lilla steg i samma område är att lägga till `markera alla som sedda` eller en diskret toppbarbadge som återanvänder samma auth-backade räknare
 - Alternativt kan samma godkännandedata användas för att lyfta fram nya patienter tydligare i `Mina patienter`-översikten direkt efter accept
+
+## 2026-05-08 — Diskret nav-badge för nya godkända kopplingar i terapeutvyn
+
+### Vad jag arbetade med
+- Valde exakt en del: **3. Enkel notifiering (badge/räknare) när patienten godkänner**
+- Målet var att göra den befintliga auth-backade godkännandenotifieringen synlig även innan terapeuten hunnit titta i dashboardkortet
+
+### Vad jag ändrade
+- Lade till frontendfunktionen `renderTherapistDashboardNavBadge()` i `script.js`
+- Återanvände befintlig auth-backad räknare `newlyAcceptedRequestCount` från dashboard-sammanfattningen i stället för att införa ny backendlogik
+- Kopplade badgen till både:
+  - terapeutens sidonavigering (`Dashboard`)
+  - terapeutens bottom-nav (`Hem`)
+- Gjorde badgen självrensande när inga nya godkännanden finns eller när användaren inte är terapeut
+- Lade till CSS i `styles.css` för `.nav-notification-badge` samt positionering på nav-item och bottom-item
+- Lade till riktad API-smoke `api-accepted-nav-badge-check.js` för att verifiera att auth-backat accept→seen-flöde fortfarande beter sig rätt
+
+### Vad som nu fungerar
+- Terapeuten får nu en diskret badge i navigationen när en patient godkänt en kopplingsförfrågan
+- Badgen bygger på samma auth-backade räknare som dashboardkortet och kräver ingen separat lagringsmodell
+- Badgen försvinner igen när godkännandet markeras som sett
+- Praktiskt verifierat via lokal API-smoke mot temporär Node-server på port `4391`:
+  - terapeut registreras
+  - patient registreras
+  - terapeuten skickar kopplingsförfrågan
+  - patienten godkänner
+  - dashboard-sammanfattningen visar `newlyAcceptedRequestCount: 1`
+  - terapeuten kör `acknowledge-accepted`
+  - dashboard-sammanfattningen går tillbaka till `newlyAcceptedRequestCount: 0`
+- `node --check script.js && node --check server.js && node --check api-accepted-nav-badge-check.js` passerar
+- Lokal serverstart verifierades med `node server.js`
+
+### Vad som inte fungerar
+- Full praktisk browserverifiering kunde inte genomföras i denna miljö eftersom OpenClaws browser-verktyg timeoutade och uttryckligen inte ska återförsökas innan gateway/browserkopplingen fungerar igen
+- Badgen visas just nu bara i terapeutens navigation och inte ännu i header/toppbar eller i andra vyers egna räknare
+- Ingen extra ljud-/toastnotifiering triggas bara av extern accept; notisen syns när auth-backad data hämtas in och renderas
+
+### Nästa steg
+- Ett rimligt nästa lilla steg i samma område är att återanvända samma räknare i en liten header-/toppbarindikator för ännu bättre synlighet
+- Alternativt kan nya godkända patienter lyftas tydligare i `Mina patienter`-översikten direkt efter accept
