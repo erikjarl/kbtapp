@@ -144,6 +144,7 @@ function createRelationship(db, therapist, client) {
     therapistName: therapist.name,
     clientUserId: client.id,
     clientName: client.name,
+    clientEmail: client.email,
     status: 'pending',
     createdAt: new Date().toISOString()
   };
@@ -151,13 +152,18 @@ function createRelationship(db, therapist, client) {
   return relationship;
 }
 
-function publicRelationship(relationship) {
+function publicRelationship(relationship, db = null) {
+  const clientEmail = relationship.clientEmail
+    || (db?.users || []).find(user => user.id === relationship.clientUserId)?.email
+    || '';
+
   return {
     id: relationship.id,
     therapistUserId: relationship.therapistUserId,
     therapistName: relationship.therapistName,
     clientUserId: relationship.clientUserId,
     clientName: relationship.clientName,
+    clientEmail,
     status: relationship.status || 'accepted',
     createdAt: relationship.createdAt,
     respondedAt: relationship.respondedAt || ''
@@ -368,7 +374,7 @@ async function handleApi(req, res, pathname) {
         if (sessionData.user.role === 'therapist') return item.therapistUserId === sessionData.user.id;
         if (sessionData.user.role === 'client') return item.clientUserId === sessionData.user.id;
         return false;
-      }).map(publicRelationship);
+      }).map(item => publicRelationship(item, sessionData.db));
 
       return sendJson(res, 200, { requests });
     }

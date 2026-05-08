@@ -1038,3 +1038,36 @@
 - Nästa iterativa steg: ge terapeuten möjlighet att återkalla en skickad förfrågan, eller visa e-postadress för förfrågan
 - Därefter: en enkel notifiering när patienten godkänner (en badge/siffra på dashboard eller en toast)
 - Fortsätt sedan med den övergripande helheten: se till att all data som ändras lagras auth-bakat, inklusive tilldelningar, inskick och meddelanden
+
+## 2026-05-08 — E-postadress visas nu i terapeutens pending-lista
+
+### Vad jag arbetade med
+- En tydligt avgränsad del: att göra terapeutens lista över skickade kopplingsförfrågningar mer identifierbar när flera patienter kan ha liknande namn
+- Målet var att hålla ändringen liten och fokuserad på just pending-listan
+
+### Vad jag ändrade
+- Utökade relationsmodellen i `server.js` så nya kopplingsförfrågningar även sparar `clientEmail`
+- Gjorde `publicRelationship(...)` lite robustare så e-post också kan härledas från användardatabasen för äldre relationsposter som saknar fältet
+- Justerade `GET /api/relationships/requests` så terapeuten får med `clientEmail` i API-svaret
+- Uppdaterade `renderTherapistPendingRequests()` i `script.js` så pending-listan nu visar patientens e-postadress under namnet
+- Höll resten av återkallnings- och godkännandeflödet oförändrat
+
+### Vad som nu fungerar
+- Terapeuten ser nu både patientnamn och e-postadress i dashboardens pending-lista för skickade kopplingsförfrågningar
+- Äldre pending-relationer utan sparad `clientEmail` kan fortfarande visas korrekt via fallback till registrerat patientkonto
+- Praktiskt verifierat via curl mot lokal Node-server på port `4173`:
+  - registrera terapeutkonto
+  - registrera patientkonto
+  - skicka kopplingsförfrågan som terapeut
+  - verifiera att `GET /api/relationships/requests` för terapeuten nu returnerar `clientEmail`
+- `node --check server.js && node --check script.js` passerar
+- Lokal server verifierades fortsatt via redan körande `node server.js`
+
+### Vad som inte fungerar
+- Full praktisk browserverifiering kunde inte genomföras i denna miljö eftersom OpenClaws browser-verktyg fortfarande inte kunde ansluta till host-Chrome och sandbox-browser saknas
+- E-postadressen visas just nu bara i terapeutens pending-lista och inte i andra eventuella relationsvyer
+- Det finns fortfarande ingen notifiering/badge när patienten faktiskt godkänner förfrågan
+
+### Nästa steg
+- Nästa lilla rimliga steg i samma område är en enkel notifiering eller badge när patienten godkänner en tidigare skickad förfrågan
+- Alternativt kan samma pending-/relationsinfo återanvändas i en tydligare `Mina patienter`-översikt om fler relationsdetaljer behövs

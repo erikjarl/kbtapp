@@ -2011,6 +2011,7 @@ function initMaterialBuilder() {
       item.innerHTML = `
         <div class="pending-request-info">
           <strong>${escapeHtml(request.clientName || 'Patient')}</strong>
+          <small>${escapeHtml(request.clientEmail || 'Ingen e-post tillgänglig')}</small>
           <small>Skickades ${escapeHtml(createdDate)} · inväntar godkännande</small>
         </div>
         <div class="pending-request-actions">
