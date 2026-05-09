@@ -1145,19 +1145,23 @@
   - `page.goto('https://erikjarl.github.io/kbtapp/#', { waitUntil: 'domcontentloaded' })` timeoutade
   - med `waitUntil: 'commit'` gick sidan att nå med HTTP 200, men den blev kvar i fastnat laddläge och sessionen dog senare
 - **Lokal statisk server efter nya failsafen:**
-  - `page.goto('http://127.0.0.1:8123/#', { waitUntil: 'domcontentloaded' })` passerade
+  - `page.goto('http://127.0.0.1:8123/#', { waitUntil: 'domcontentloaded' })` passerade på både desktop och mobil
   - `document.readyState === 'complete'`
   - loginvyn visades
   - auth-knapparna för riktig backend var disable:ade
+  - rollknapparna gick fortfarande att klicka i utan att sidan fastnade
   - feedbacktexten visade: `Publik demoläge: den fulla inloggningen kräver backend/servermiljö och är tillfälligt avstängd här för att sidan ska förbli stabil.`
 - **Samma lokala filer, men simulerat GitHub Pages-hostnamn (`erikjarl.github.io`) via host-resolver:**
   - sidan laddade klart
   - samma stabila demoläge visades
   - ingen evig laddning i Playwright
+- **Publik deploykontroll via hämtad fil:**
+  - `https://erikjarl.github.io/kbtapp/script.js` visade fortfarande den äldre bootsekvensen med direkt `initMaterialBuilder(); restoreSession();`
+  - den publika GitHub Pages-versionen saknar alltså fortfarande den nya failsafe-logiken
 
 ### Vad som fortfarande inte är löst
 - Den faktiska publika GitHub Pages-sidan är fortfarande inte verifierbart stabil ännu, eftersom fixen ännu inte är publicerad där
-- Försök att `git push origin main` från denna miljö blockerades: processen gick inte igenom och GitHub CLI visade samtidigt att lokal GitHub-auth är ogiltig (`gh auth status` rapporterade invalid token)
+- Försök att `git push origin main` från denna miljö blockerades av GitHub-auth: pushförsöket fick `HTTP/2 401` från GitHub och fastnade därefter i `git-credential-osxkeychain`
 - Därför ligger den publika URL:en kvar på en äldre version som fortfarande reproducerar hanget
 
 ### Nästa minsta steg mot att eliminera hanget
@@ -1167,6 +1171,80 @@
   - stannar i stabilt demoläge
   - går att klicka i utan evig laddning
   - inte längre fastnar i browser-hang/result_code_hung
+
+## 2026-05-09 — Publik hangsituation fortsatt reproducerad, lokal statisk fix fortsatt stabil
+
+### Vad jag reproducerade
+- Publika URL:en `https://erikjarl.github.io/kbtapp/#` reproducerar fortfarande hangsituationen i Playwright mot systemets Chrome
+- `page.goto(..., { waitUntil: 'domcontentloaded', timeout: 30000 })` timeoutade igen mot den publika sidan
+- När testsessionen låg kvar mot den publika sidan dödades browserprocessen därefter av miljön, vilket stämmer med att sidan fortfarande hamnar i ett tungt fastnat läge
+- Hämtad publik `script.js` visar fortfarande den äldre bootsekvensen med direkt `initMaterialBuilder(); restoreSession();` och saknar lokala `hasReachableBackend()`-failsafen
+
+### Vad jag ändrade
+- Ingen ny appkod ändrades i denna körning; fokus låg på att verifiera att den redan gjorda static-failsafe-fixen verkligen är rätt riktning och att gapet nu är publicering, inte ny lokal kod
+- Uppdaterade endast denna progresslogg med ny verifiering
+
+### Vad Playwright visade
+- **Publik URL:**
+  - fortsatt timeout på `domcontentloaded`
+  - browserprocessen överlevde inte hela körningen efter fastnat läge
+- **Lokal statisk motsvarighet (`python3 -m http.server` på port `8123`):**
+  - desktop 1440×900: laddade klart med HTTP 200, `document.readyState: complete`
+  - mobil iPhone 12-profil: laddade klart med HTTP 200, `document.readyState: complete`
+  - loginvyn var aktiv i båda fallen
+  - auth-knapparna var disable:ade i båda fallen
+  - rollknapparna gick att klicka utan hang; feedbacken slutade på `Vald roll: terapeut.` efter klickväxling
+- Det betyder att den lokala statiska failsafen fortfarande beter sig stabilt i praktisk browserkörning, medan publika GitHub Pages fortfarande kör gammal kod
+
+### Vad som fortfarande inte är löst
+- Den faktiska publika GitHub Pages-sidan är fortfarande inte verifierbart stabil eftersom den ännu inte serverar den nya boot/failsafe-koden
+- `git push origin main` gick fortfarande inte att slutföra från denna miljö:
+  - vanligt `git push` fastnade utan användbar progress
+  - även försök med `GIT_TERMINAL_PROMPT=0` nådde inte avslut inom timeout
+  - remote använder fortsatt `https://github.com/erikjarl/kbtapp.git` tillsammans med `credential.helper=osxkeychain`, vilket starkt pekar på auth/credential-blockering i denna körmiljö
+
+### Nästa minsta steg mot att eliminera hanget
+- Publicera de redan färdiga commitsen (`main` ligger lokalt före `origin/main`) till GitHub så att GitHub Pages faktiskt får static-failsafe-versionen
+- Direkt efter publicering: köra Playwright igen mot den publika URL:en och verifiera exakt att sidan
+  - laddar klart
+  - blir interaktiv
+  - går att klicka i
+  - inte längre fastnar i evig laddning / `result_code_hung`
+
+## 2026-05-09 — Publik GitHub Pages nu verifierat stabil efter deploy av static failsafe
+
+### Vad jag reproducerade
+- Den publika URL:en `https://erikjarl.github.io/kbtapp/#` hängde först fortfarande i äldre deployläge innan publicering av senaste lokala fixar
+- Tidigare i denna iteration visade publik `script.js` fortfarande gammal bootsekvens utan backend-probe/failsafe, vilket stämde med att `browser-hang` fortfarande fanns publikt
+- Efter push verifierade jag att GitHub Pages började servera uppdaterad `script.js` med `IS_STATIC_PUBLIC_HOST` och `hasReachableBackend()`
+
+### Vad jag ändrade
+- Ingen ny appkod behövdes i denna delkörning; den avgörande koden fanns redan lokalt i commit `815aae1` (`Harden static startup for GitHub Pages`)
+- Jag pushade de lokala commitsen till `origin/main`, inklusive static-failsafe-fixen, så att GitHub Pages fick den faktiska stabiliserade bootsekvensen
+
+### Vad Playwright visade
+- **Publik URL efter deploy, första kontrollen:**
+  - `page.goto('https://erikjarl.github.io/kbtapp/#', { waitUntil: 'commit' })` gav HTTP 200
+  - efter 10 sekunder låg sidan kvar stabilt med `document.readyState: complete`
+  - loginvyn var aktiv
+  - feedbacktexten visade: `Publik demoläge: den fulla inloggningen kräver backend/servermiljö och är tillfälligt avstängd här för att sidan ska förbli stabil.`
+  - inga tecken på evig laddning eller fastfrusen session
+- **Publik URL efter deploy, interaktivitetskontroll desktop 1440×900:**
+  - `page.goto(..., { waitUntil: 'domcontentloaded' })` passerade med HTTP 200
+  - rollknapparna gick att klicka mellan `Patient` och `Terapeut`
+  - feedbacken växlade först till `Vald roll: patient.` och sedan tillbaka till `Vald roll: terapeut.`
+  - `Logga in` och `Skapa konto` var disable:ade som avsett i public static mode
+- **Publik URL efter deploy, interaktivitetskontroll mobil iPhone 12-profil:**
+  - samma resultat som på desktop: klar laddning, klickbar rollväxling, stabil loginvy och inga hangs
+- Ett ensamt 404-fel syntes fortsatt i browserkonsolen, men det blockerade inte rendering eller interaktivitet och gav inte längre något hangbeteende
+
+### Vad som fortfarande inte är löst
+- Den publika GitHub Pages-versionen är nu stabiliserad mot hangsituationen, men den kör medvetet i begränsat demoläge utan riktig auth/backend
+- Ett mindre 404-anrop finns fortfarande i publika browserkonsolen och bör identifieras senare, men det orsakar inte längre `result_code_hung` eller låst laddning
+
+### Nästa minsta steg mot att eliminera hanget
+- Hangsituationen på GitHub Pages är nu eliminerad i praktiken enligt publika Playwright-körningar
+- Nästa minsta steg är därför endast lågprioriterad efterstädning: identifiera det kvarvarande 404-anropet och bekräfta att det är benign resursbrist (t.ex. favicon eller liknande), utan att öppna nya funktionsspår
 
 ## 2026-05-08 — Diskret nav-badge för nya godkända kopplingar i terapeutvyn
 
