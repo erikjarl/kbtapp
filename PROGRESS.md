@@ -1246,6 +1246,37 @@
 - Hangsituationen på GitHub Pages är nu eliminerad i praktiken enligt publika Playwright-körningar
 - Nästa minsta steg är därför endast lågprioriterad efterstädning: identifiera det kvarvarande 404-anropet och bekräfta att det är benign resursbrist (t.ex. favicon eller liknande), utan att öppna nya funktionsspår
 
+## 2026-05-09 — Re-verifiering av publik GitHub Pages efter hangsfix
+
+### Vad jag reproducerade
+- Jag körde en ny praktisk Playwright-verifiering direkt mot den publika URL:en `https://erikjarl.github.io/kbtapp/#`
+- Jag försökte uttryckligen återfå den tidigare hangsituationen genom att kräva riktig sidladdning, vänta efter boot och sedan klicka i loginvyn
+- Den tidigare publika hangsituationen reproducerades **inte** längre i denna körning
+
+### Vad jag ändrade
+- Ingen appkod ändrades i denna körning eftersom den publika GitHub Pages-versionen redan betedde sig stabilt
+- Jag uppdaterade endast denna progresslogg med ny verifiering av det publika läget
+
+### Vad Playwright visade
+- **Desktop 1440×900 mot publik URL:**
+  - `page.goto(..., { waitUntil: 'domcontentloaded' })` passerade med HTTP 200
+  - sidan nådde `document.readyState: complete`
+  - loginvyn var aktiv
+  - rollknapparna gick att klicka mellan `Patient` och `Terapeut`
+  - auth-feedback växlade korrekt först till `Vald roll: patient.` och därefter tillbaka till `Vald roll: terapeut.`
+  - `Logga in` och `Skapa konto` var disable:ade som avsett i public static mode
+- **Mobil iPhone 12-profil mot publik URL:**
+  - samma resultat som desktop: HTTP 200, `readyState: complete`, klickbar rollväxling och stabil loginvy
+- Browserkonsolen visade fortfarande ett ensamt 404-fel för en resurs, men det blockerade inte interaktivitet, gav ingen evigladdning och utlöste inte längre browser-hang / `result_code_hung`
+
+### Vad som fortfarande inte är löst
+- Själva hangsituationen på GitHub Pages kunde inte längre reproduceras i denna körning och framstår därför som löst i praktiken
+- Ett mindre kvarvarande 404-anrop finns fortfarande i publik browserkonsol och bör vid behov identifieras separat senare, men det beter sig som ett benign sidofel och inte som orsaken till hanget
+
+### Nästa minsta steg mot att eliminera hanget
+- Inget ytterligare steg krävs just nu för själva hangsituationen eftersom publik Playwright-verifiering nu visar stabil laddning och interaktivitet på både desktop och mobil
+- Endast eventuell lågprioriterad efterkontroll återstår: identifiera vilket 404-anrop som syns i konsolen och bekräfta att det är helt ofarligt
+
 ## 2026-05-08 — Diskret nav-badge för nya godkända kopplingar i terapeutvyn
 
 ### Vad jag arbetade med
