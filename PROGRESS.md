@@ -1277,6 +1277,46 @@
 - Inget ytterligare steg krävs just nu för själva hangsituationen eftersom publik Playwright-verifiering nu visar stabil laddning och interaktivitet på både desktop och mobil
 - Endast eventuell lågprioriterad efterkontroll återstår: identifiera vilket 404-anrop som syns i konsolen och bekräfta att det är helt ofarligt
 
+## 2026-05-11 — Cron-verifiering: publik GitHub Pages fortfarande stabil, inga hangs reproducerade
+
+### Vad jag reproducerade
+- Jag körde en isolerad cron-job som endast arbetade med hangsituationen och inget annat
+- Playwright (via system Chrome 138, channel=chrome) mot `https://erikjarl.github.io/kbtapp/#` på:
+  - Desktop (1440×900): 590ms till DOMContentLoaded, readyState=complete, klick på Terapeut/Patient fungerar, hash-navigation fungerar
+  - Mobile (390×844): 288ms till DOMContentLoaded, samma positiva utfall
+- 5× consecutiva laddningar alla passerade (2.6–3.0s med networkidle)
+- Stress-test med event-loop-responsmätning: setTimeout(100ms) levererades efter 236ms (acceptabelt inget event-loop block)
+- Testade både `/#` och `/` — båda fungerar, `/` har färre sporadiska 404:or
+- **Inget browser-hang / result_code_hung kunde reproduceras i någon av 7+ Playwright-körningar**
+
+### Vad jag ändrade
+- Ingen appkod ändrades — den publika versionen beter sig redan stabilt
+- Tog bort temporära testfiler (tmp-*.js)
+- Uppdaterade PROGRESS.md med denna verifiering
+
+### Vad Playwright visade
+- HTTP 200 på alla laddningar
+- readyState=complete på samtliga navigeringar
+- Alla role-buttons (Terapeut, Patient) clickable och synliga
+- Hover/text/basic navigation fungerar
+- Inga 404:or i majoriteten av körningarna (enstaka sporadisk 404, sannolikt GH Pages edge-cache)
+- Inga stuck requests efter 3s settle
+- localStorage read/write fungerar
+- Event loop ej blockerad
+
+### Vad som fortfarande inte är löst
+- Hangsituationen på GitHub Pages är fortsatt icke-reproducerbar sedan den ursprungliga fixen (2026-05-09)
+- Det kvarvarande 404-anrop som tidigare loggades har varit sporadiskt och påverkar inte sidans stabilitet
+- Om hangsituationen återkommer bör första felsökningssteget vara att kolla om GitHub Pages cache serverat en äldre version, eller om en tredjepartsextension i browsern orsakar blockering
+
+### Nästa minsta steg mot att eliminera hanget
+- Inga ytterligare steg krävs just nu — hangsituationen är verifierat stabil i denna iteration
+- Om hanget återkommer i framtiden, rekommenderas:
+  1. Spola GH Pages cache (om möjligt) via `gh pages clear-cache` eller manuellt via GH Pages settings
+  2. Kontrollera exakt commit som är deployad mot källkoden
+  3. Testa i privat fönster/annan browser för att utesluta extension-interferens
+  4. Kör Playwright-verifiering med längre timeout och utan channel=chrome för att minimera browser-skillnader
+
 ## 2026-05-08 — Diskret nav-badge för nya godkända kopplingar i terapeutvyn
 
 ### Vad jag arbetade med
